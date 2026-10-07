@@ -4,11 +4,11 @@ import streamlit.components.v1 as components
 
 
 # ============================================================
-# PAGE CONFIG
+# PAGE
 # ============================================================
 
 st.set_page_config(
-    page_title="🐍 Snake World",
+    page_title="Snake World",
     page_icon="🐍",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -22,58 +22,47 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-
-    #MainMenu {
-        visibility: hidden;
-    }
-
-    footer {
-        visibility: hidden;
-    }
-
-    header {
-        visibility: hidden;
-    }
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
 
     .block-container {
-        padding-top: 1.5rem;
+        padding-top: 1.2rem;
         padding-bottom: 1rem;
         max-width: 1500px;
     }
 
     [data-testid="stSidebar"] {
-        background: linear-gradient(
-            180deg,
-            #111827 0%,
-            #0f172a 100%
-        );
+        background:
+            linear-gradient(
+                180deg,
+                #0f172a 0%,
+                #020617 100%
+            );
     }
 
-    [data-testid="stSidebar"] * {
-        color: #f8fafc;
-    }
-
-    .game-title {
-        font-size: 3rem;
-        font-weight: 900;
-        letter-spacing: -2px;
-        margin-bottom: 0;
-        background: linear-gradient(
-            90deg,
-            #4ade80,
-            #22d3ee,
-            #818cf8
-        );
+    .snake-title {
+        font-size: 3.2rem;
+        font-weight: 950;
+        letter-spacing: -3px;
+        background:
+            linear-gradient(
+                90deg,
+                #4ade80,
+                #22d3ee,
+                #818cf8,
+                #e879f9
+            );
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
+        margin-bottom: 0;
     }
 
-    .game-subtitle {
+    .snake-subtitle {
         color: #94a3b8;
         margin-top: -8px;
-        margin-bottom: 20px;
+        margin-bottom: 15px;
     }
-
     </style>
     """,
     unsafe_allow_html=True,
@@ -85,19 +74,33 @@ st.markdown(
 # ============================================================
 
 st.sidebar.markdown("## 🐍 SNAKE WORLD")
-st.sidebar.caption("나만의 뱀을 만들어 보세요!")
+st.sidebar.caption("나만의 생명체를 만들어 보세요.")
 
 st.sidebar.markdown("---")
+
+
+game_mode = st.sidebar.selectbox(
+    "🎮 게임 모드",
+    [
+        "클래식",
+        "어드벤처",
+        "AI 대결",
+    ],
+)
+
 
 snake_style = st.sidebar.selectbox(
     "🐍 뱀 스타일",
     [
         "클래식",
         "지렁이",
-        "네온",
+        "코브라",
+        "드래곤",
+        "사이버",
         "무지개",
     ],
 )
+
 
 snake_color = st.sidebar.selectbox(
     "🎨 뱀 색상",
@@ -112,6 +115,7 @@ snake_color = st.sidebar.selectbox(
     ],
 )
 
+
 food = st.sidebar.selectbox(
     "🍴 먹이",
     [
@@ -121,11 +125,14 @@ food = st.sidebar.selectbox(
         "체리",
         "햄버거",
         "치즈",
+        "황금사과",
+        "고추",
     ],
 )
 
+
 theme = st.sidebar.selectbox(
-    "🗺️ 맵 테마",
+    "🗺️ 맵",
     [
         "숲",
         "사막",
@@ -134,8 +141,9 @@ theme = st.sidebar.selectbox(
     ],
 )
 
+
 difficulty = st.sidebar.selectbox(
-    "⚡ 난이도",
+    "⚡ 게임 난이도",
     [
         "쉬움",
         "보통",
@@ -145,28 +153,68 @@ difficulty = st.sidebar.selectbox(
     index=1,
 )
 
+
+special_food = st.sidebar.toggle(
+    "✨ 음식 특수효과",
+    value=game_mode != "클래식",
+)
+
+
+missions = st.sidebar.toggle(
+    "🎯 미션 시스템",
+    value=game_mode != "클래식",
+)
+
+
+evolution = st.sidebar.toggle(
+    "🧬 진화 시스템",
+    value=game_mode != "클래식",
+)
+
+
+obstacles = st.sidebar.toggle(
+    "🧱 맵 장애물",
+    value=game_mode != "클래식",
+)
+
+
+ai_level = "중"
+
+if game_mode == "AI 대결":
+
+    st.sidebar.markdown("---")
+
+    ai_level = st.sidebar.select_slider(
+        "🤖 AI 실력",
+        options=[
+            "하",
+            "중",
+            "상",
+        ],
+        value="중",
+    )
+
+
 st.sidebar.markdown("---")
 
 st.sidebar.markdown(
     """
-    ### 🎮 조작법
+### 🎮 조작법
 
-    **↑** 위로 이동  
-    **↓** 아래로 이동  
-    **←** 왼쪽 이동  
-    **→** 오른쪽 이동  
+**↑ ↓ ← →** 이동  
+**W A S D** 이동  
+**Space** 일시정지
 
-    **Space** 일시정지
+### 🍴 특수 음식
 
-    먹이를 먹으면  
-    🐍 몸이 한 칸씩 길어집니다!
-    """
-)
+특수효과를 끄면  
+일반 Snake처럼 플레이합니다.
 
-st.sidebar.markdown("---")
+### 🧬 진화
 
-st.sidebar.info(
-    "💡 게임 중에는 게임 화면을 클릭한 뒤 방향키를 사용하세요."
+길이가 늘어나면  
+뱀의 모습이 단계적으로 변합니다.
+"""
 )
 
 
@@ -175,14 +223,23 @@ st.sidebar.info(
 # ============================================================
 
 config = {
-    "snake_style": snake_style,
-    "snake_color": snake_color,
+    "gameMode": game_mode,
+    "snakeStyle": snake_style,
+    "snakeColor": snake_color,
     "food": food,
     "theme": theme,
     "difficulty": difficulty,
+    "specialFood": special_food,
+    "missions": missions,
+    "evolution": evolution,
+    "obstacles": obstacles,
+    "aiLevel": ai_level,
 }
 
-config_json = json.dumps(config, ensure_ascii=False)
+config_json = json.dumps(
+    config,
+    ensure_ascii=False,
+)
 
 
 # ============================================================
@@ -190,20 +247,20 @@ config_json = json.dumps(config, ensure_ascii=False)
 # ============================================================
 
 st.markdown(
-    '<div class="game-title">🐍 SNAKE WORLD</div>',
+    '<div class="snake-title">🐍 SNAKE WORLD</div>',
     unsafe_allow_html=True,
 )
 
 st.markdown(
-    '<div class="game-subtitle">'
-    '먹고, 성장하고, 살아남으세요!'
+    '<div class="snake-subtitle">'
+    '먹고 · 성장하고 · 진화하고 · 살아남으세요'
     '</div>',
     unsafe_allow_html=True,
 )
 
 
 # ============================================================
-# GAME HTML / JAVASCRIPT
+# GAME
 # ============================================================
 
 html = r"""
@@ -220,65 +277,89 @@ html = r"""
     box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
     margin: 0;
     padding: 0;
     width: 100%;
     height: 100%;
     overflow: hidden;
-    font-family:
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        sans-serif;
 }
 
 body {
     background: #020617;
     color: white;
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-.game-wrapper {
+.game {
     width: 100%;
-    max-width: 1100px;
+    max-width: 1150px;
     height: 100%;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
 }
 
-.top-bar {
+.top {
+    height: 68px;
+    flex-shrink: 0;
+
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    background: rgba(15, 23, 42, 0.95);
-    border: 1px solid rgba(148, 163, 184, 0.2);
+    justify-content: space-between;
+
+    padding: 10px 18px;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(15,23,42,.98),
+            rgba(30,41,59,.95)
+        );
+
+    border:
+        1px solid
+        rgba(148,163,184,.18);
+
     border-radius: 18px;
-    padding: 12px 18px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+
+    box-shadow:
+        0 15px 50px rgba(0,0,0,.25);
 }
 
-.brand {
+.logo {
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
-.brand-icon {
-    font-size: 28px;
+.logo-icon {
+    font-size: 29px;
 }
 
-.brand-title {
-    font-size: 18px;
-    font-weight: 800;
+.logo-text {
+    font-size: 17px;
+    font-weight: 900;
+}
+
+.mode {
+    font-size: 10px;
+    color: #94a3b8;
+    margin-top: 2px;
 }
 
 .stats {
     display: flex;
-    gap: 18px;
+    gap: 10px;
 }
 
 .stat {
@@ -286,91 +367,112 @@ body {
     text-align: center;
 }
 
-.stat-label {
-    color: #94a3b8;
-    font-size: 11px;
-    text-transform: uppercase;
+.label {
+    color: #64748b;
+    font-size: 9px;
     letter-spacing: 1px;
 }
 
-.stat-value {
-    font-size: 21px;
+.value {
+    font-size: 20px;
     font-weight: 900;
 }
 
-#gameCanvas {
-    display: block;
+#canvas {
     width: 100%;
     flex: 1;
     min-height: 480px;
+
+    display: block;
+
     border-radius: 24px;
-    border: 2px solid rgba(148, 163, 184, 0.2);
-    box-shadow:
-        0 25px 70px rgba(0,0,0,0.45),
-        inset 0 0 50px rgba(255,255,255,0.02);
-    cursor: crosshair;
+
+    border:
+        2px solid
+        rgba(148,163,184,.18);
+
     outline: none;
+
+    box-shadow:
+        0 25px 80px rgba(0,0,0,.5);
+
+    cursor: crosshair;
 }
 
-.bottom-bar {
+.bottom {
+    flex-shrink: 0;
+
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 8px 5px;
+    justify-content: space-between;
+
+    min-height: 45px;
 }
 
-.message {
+.status {
     color: #94a3b8;
     font-size: 13px;
 }
 
-.controls {
+.buttons {
     display: flex;
-    gap: 8px;
+    gap: 7px;
 }
 
-button {
-    border: 1px solid rgba(148,163,184,0.25);
-    background: #1e293b;
+.game-btn {
     color: white;
-    border-radius: 10px;
-    padding: 9px 14px;
-    cursor: pointer;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 9px;
+    padding: 8px 13px;
     font-weight: 700;
+    cursor: pointer;
 }
 
-button:hover {
+.game-btn:hover {
     background: #334155;
 }
 
-.mobile-controls {
+.mobile {
     display: none;
-    grid-template-columns: repeat(3, 55px);
-    grid-template-rows: repeat(2, 55px);
+
+    grid-template-columns:
+        repeat(3, 54px);
+
+    grid-template-rows:
+        repeat(2, 54px);
+
     justify-content: center;
-    gap: 6px;
+
+    gap: 5px;
 }
 
-.mobile-btn {
-    font-size: 20px;
-    padding: 0;
+.mobile button {
+    background: #1e293b;
+    color: white;
+    border:
+        1px solid
+        #334155;
+
+    border-radius: 12px;
+    font-size: 19px;
 }
 
-.mobile-up {
+.up {
     grid-column: 2;
 }
 
-.mobile-left {
+.left {
     grid-column: 1;
     grid-row: 2;
 }
 
-.mobile-down {
+.down {
     grid-column: 2;
     grid-row: 2;
 }
 
-.mobile-right {
+.right {
     grid-column: 3;
     grid-row: 2;
 }
@@ -378,87 +480,168 @@ button:hover {
 .overlay {
     position: fixed;
     inset: 0;
+
     display: none;
+
     align-items: center;
     justify-content: center;
-    background: rgba(2,6,23,0.78);
+
+    background:
+        rgba(2,6,23,.82);
+
     backdrop-filter: blur(8px);
-    z-index: 10;
+
+    z-index: 50;
 }
 
-.overlay-card {
-    width: min(420px, 90%);
+.card {
+    width: min(450px, 90%);
+
+    padding: 34px;
+
     text-align: center;
-    padding: 35px;
-    border-radius: 25px;
+
     background:
         linear-gradient(
             145deg,
             #111827,
             #1e293b
         );
-    border: 1px solid rgba(255,255,255,0.12);
-    box-shadow: 0 30px 100px rgba(0,0,0,0.5);
+
+    border:
+        1px solid
+        rgba(255,255,255,.12);
+
+    border-radius: 25px;
+
+    box-shadow:
+        0 35px 100px rgba(0,0,0,.55);
 }
 
-.overlay-title {
-    font-size: 38px;
-    font-weight: 900;
-    margin-bottom: 8px;
+.card-title {
+    font-size: 39px;
+    font-weight: 950;
 }
 
-.overlay-score {
-    font-size: 20px;
+.card-text {
     color: #94a3b8;
-    margin-bottom: 25px;
+    margin: 10px 0 25px;
 }
 
-.restart-button {
-    background: linear-gradient(
-        135deg,
-        #22c55e,
-        #06b6d4
-    );
-    border: none;
+.restart {
+    color: white;
+    border: 0;
+    border-radius: 12px;
     padding: 13px 30px;
-    font-size: 16px;
+    font-weight: 900;
+    font-size: 15px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #22c55e,
+            #06b6d4
+        );
+
+    cursor: pointer;
 }
 
-@media (max-width: 700px) {
+.mission {
+    position: absolute;
 
-    .top-bar {
+    left: 20px;
+    top: 95px;
+
+    padding: 10px 13px;
+
+    border-radius: 12px;
+
+    background:
+        rgba(15,23,42,.88);
+
+    border:
+        1px solid
+        rgba(255,255,255,.1);
+
+    font-size: 11px;
+
+    min-width: 190px;
+
+    pointer-events: none;
+}
+
+.mission-title {
+    color: #fbbf24;
+    font-weight: 900;
+    margin-bottom: 4px;
+}
+
+.mission-progress {
+    color: #cbd5e1;
+}
+
+.power {
+    position: absolute;
+
+    right: 20px;
+    top: 95px;
+
+    padding: 9px 12px;
+
+    border-radius: 12px;
+
+    background:
+        rgba(15,23,42,.88);
+
+    border:
+        1px solid
+        rgba(255,255,255,.1);
+
+    font-size: 11px;
+
+    pointer-events: none;
+}
+
+@media(max-width:700px) {
+
+    .top {
+        height: 55px;
         border-radius: 12px;
-        padding: 8px 10px;
     }
 
-    .brand-title {
-        font-size: 14px;
+    .logo-text {
+        font-size: 13px;
     }
 
     .stats {
-        gap: 7px;
+        gap: 3px;
     }
 
     .stat {
-        min-width: 55px;
+        min-width: 48px;
     }
 
-    .stat-value {
-        font-size: 17px;
+    .value {
+        font-size: 16px;
     }
 
-    #gameCanvas {
-        min-height: 390px;
+    #canvas {
+        min-height: 380px;
         border-radius: 15px;
     }
 
-    .mobile-controls {
+    .mobile {
         display: grid;
     }
 
-    .bottom-bar {
+    .bottom {
         flex-direction: column;
-        gap: 10px;
+        gap: 7px;
+    }
+
+    .mission,
+    .power {
+        display: none;
     }
 }
 
@@ -466,58 +649,170 @@ button:hover {
 
 </head>
 
+
 <body>
 
-<div class="game-wrapper">
 
-    <div class="top-bar">
+<div class="game">
 
-        <div class="brand">
-            <div class="brand-icon">🐍</div>
-            <div class="brand-title">SNAKE WORLD</div>
+
+    <div class="top">
+
+        <div class="logo">
+
+            <div class="logo-icon">
+                🐍
+            </div>
+
+            <div>
+
+                <div class="logo-text">
+                    SNAKE WORLD
+                </div>
+
+                <div class="mode" id="modeText">
+                    CLASSIC
+                </div>
+
+            </div>
+
         </div>
+
 
         <div class="stats">
 
             <div class="stat">
-                <div class="stat-label">SCORE</div>
-                <div class="stat-value" id="score">0</div>
+
+                <div class="label">
+                    SCORE
+                </div>
+
+                <div class="value"
+                     id="score">
+                    0
+                </div>
+
             </div>
 
-            <div class="stat">
-                <div class="stat-label">BEST</div>
-                <div class="stat-value" id="best">0</div>
-            </div>
 
             <div class="stat">
-                <div class="stat-label">LENGTH</div>
-                <div class="stat-value" id="length">3</div>
+
+                <div class="label">
+                    BEST
+                </div>
+
+                <div class="value"
+                     id="best">
+                    0
+                </div>
+
+            </div>
+
+
+            <div class="stat">
+
+                <div class="label">
+                    LENGTH
+                </div>
+
+                <div class="value"
+                     id="length">
+                    3
+                </div>
+
+            </div>
+
+
+            <div class="stat">
+
+                <div class="label">
+                    LEVEL
+                </div>
+
+                <div class="value"
+                     id="level">
+                    1
+                </div>
+
             </div>
 
         </div>
 
     </div>
 
-    <canvas id="gameCanvas" tabindex="0"></canvas>
 
-    <div class="mobile-controls">
+    <canvas id="canvas" tabindex="0"></canvas>
 
-        <button class="mobile-btn mobile-up" data-dir="up">▲</button>
-        <button class="mobile-btn mobile-left" data-dir="left">◀</button>
-        <button class="mobile-btn mobile-down" data-dir="down">▼</button>
-        <button class="mobile-btn mobile-right" data-dir="right">▶</button>
+
+    <div class="mission"
+         id="missionBox">
+
+        <div class="mission-title">
+            🎯 MISSION
+        </div>
+
+        <div class="mission-progress"
+             id="missionText">
+            준비 중...
+        </div>
 
     </div>
 
-    <div class="bottom-bar">
 
-        <div class="message" id="message">
-            방향키로 움직이세요
+    <div class="power"
+         id="powerBox">
+
+        ⚡ <span id="powerText">
+            특별 효과 없음
+        </span>
+
+    </div>
+
+
+    <div class="mobile">
+
+        <button class="up"
+                data-dir="up">
+            ▲
+        </button>
+
+        <button class="left"
+                data-dir="left">
+            ◀
+        </button>
+
+        <button class="down"
+                data-dir="down">
+            ▼
+        </button>
+
+        <button class="right"
+                data-dir="right">
+            ▶
+        </button>
+
+    </div>
+
+
+    <div class="bottom">
+
+        <div class="status"
+             id="status">
+            방향키로 시작하세요
         </div>
 
-        <div class="controls">
-            <button id="pauseBtn">⏸ 일시정지</button>
-            <button id="restartBtn">🔄 다시 시작</button>
+        <div class="buttons">
+
+            <button class="game-btn"
+                    id="pause">
+                ⏸ 일시정지
+            </button>
+
+            <button class="game-btn"
+                    id="restart">
+                🔄 다시 시작
+            </button>
+
         </div>
 
     </div>
@@ -525,19 +820,23 @@ button:hover {
 </div>
 
 
-<div class="overlay" id="gameOverOverlay">
+<div class="overlay"
+     id="overlay">
 
-    <div class="overlay-card">
+    <div class="card">
 
-        <div class="overlay-title">
-            💥 GAME OVER
+        <div class="card-title"
+             id="overTitle">
+            GAME OVER
         </div>
 
-        <div class="overlay-score">
-            점수: <strong id="finalScore">0</strong>
+        <div class="card-text"
+             id="overText">
+            점수: 0
         </div>
 
-        <button class="restart-button" id="overlayRestart">
+        <button class="restart"
+                id="overRestart">
             다시 도전하기
         </button>
 
@@ -548,76 +847,79 @@ button:hover {
 
 <script>
 
+
+// ============================================================
+// CONFIG
+// ============================================================
+
 const CONFIG = __CONFIG__;
 
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
 
-const scoreElement = document.getElementById("score");
-const bestElement = document.getElementById("best");
-const lengthElement = document.getElementById("length");
-const messageElement = document.getElementById("message");
+// ============================================================
+// DOM
+// ============================================================
 
-const pauseBtn = document.getElementById("pauseBtn");
-const restartBtn = document.getElementById("restartBtn");
+const canvas =
+    document.getElementById("canvas");
 
-const overlay = document.getElementById("gameOverOverlay");
-const finalScore = document.getElementById("finalScore");
-const overlayRestart = document.getElementById("overlayRestart");
+const ctx =
+    canvas.getContext("2d");
+
+const scoreEl =
+    document.getElementById("score");
+
+const bestEl =
+    document.getElementById("best");
+
+const lengthEl =
+    document.getElementById("length");
+
+const levelEl =
+    document.getElementById("level");
+
+const statusEl =
+    document.getElementById("status");
+
+const modeEl =
+    document.getElementById("modeText");
+
+const overlay =
+    document.getElementById("overlay");
+
+const overTitle =
+    document.getElementById("overTitle");
+
+const overText =
+    document.getElementById("overText");
+
+const missionBox =
+    document.getElementById("missionBox");
+
+const missionText =
+    document.getElementById("missionText");
+
+const powerText =
+    document.getElementById("powerText");
 
 
 // ============================================================
-// GAME SETTINGS
+// CONSTANTS
 // ============================================================
 
-const GRID = 28;
+const GRID = 30;
 
-const difficultySpeed = {
+const SPEEDS = {
     "쉬움": 155,
     "보통": 110,
     "어려움": 78,
     "지옥": 52
 };
 
-const THEMES = {
-
-    "숲": {
-        background: "#071c12",
-        board: "#0b2a1a",
-        grid: "rgba(74,222,128,0.055)",
-        border: "#22c55e",
-        glow: "rgba(34,197,94,0.25)",
-        decoration: "#14532d"
-    },
-
-    "사막": {
-        background: "#291807",
-        board: "#4a2d0d",
-        grid: "rgba(251,191,36,0.07)",
-        border: "#f59e0b",
-        glow: "rgba(245,158,11,0.25)",
-        decoration: "#78350f"
-    },
-
-    "얼음": {
-        background: "#071b2b",
-        board: "#0c3045",
-        grid: "rgba(125,211,252,0.07)",
-        border: "#38bdf8",
-        glow: "rgba(56,189,248,0.28)",
-        decoration: "#164e63"
-    },
-
-    "우주": {
-        background: "#07051c",
-        board: "#100d2e",
-        grid: "rgba(167,139,250,0.07)",
-        border: "#8b5cf6",
-        glow: "rgba(139,92,246,0.3)",
-        decoration: "#312e81"
-    }
+const AI_SPEEDS = {
+    "하": 145,
+    "중": 105,
+    "상": 72
 };
-
 
 const COLORS = {
 
@@ -631,181 +933,450 @@ const COLORS = {
 
 };
 
+const FOOD = {
 
-const FOOD_EMOJI = {
+    "사과": {
+        emoji: "🍎",
+        points: 1,
+        grow: 1,
+        effect: "몸 +1"
+    },
 
-    "사과": "🍎",
-    "딸기": "🍓",
-    "포도": "🍇",
-    "체리": "🍒",
-    "햄버거": "🍔",
-    "치즈": "🧀"
+    "딸기": {
+        emoji: "🍓",
+        points: 2,
+        grow: 2,
+        effect: "몸 +2"
+    },
+
+    "포도": {
+        emoji: "🍇",
+        points: 5,
+        grow: 1,
+        effect: "점수 +5"
+    },
+
+    "체리": {
+        emoji: "🍒",
+        points: 3,
+        grow: 1,
+        effect: "잠시 속도 증가"
+    },
+
+    "햄버거": {
+        emoji: "🍔",
+        points: 4,
+        grow: 4,
+        effect: "몸 +4 / 느려짐"
+    },
+
+    "치즈": {
+        emoji: "🧀",
+        points: 3,
+        grow: 1,
+        effect: "3초 무적"
+    },
+
+    "황금사과": {
+        emoji: "🍏",
+        points: 10,
+        grow: 3,
+        effect: "보너스"
+    },
+
+    "고추": {
+        emoji: "🌶️",
+        points: 6,
+        grow: 1,
+        effect: "엄청 빨라짐"
+    }
 
 };
 
 
-const theme = THEMES[CONFIG.theme];
-const snakeColor = COLORS[CONFIG.snake_color];
-const speed = difficultySpeed[CONFIG.difficulty];
+// ============================================================
+// THEMES
+// ============================================================
+
+const THEMES = {
+
+    "숲": {
+        bg: "#06140d",
+        board: "#0b2416",
+        grid: "rgba(74,222,128,.06)",
+        border: "#22c55e",
+        accent: "#86efac"
+    },
+
+    "사막": {
+        bg: "#241205",
+        board: "#4a2b0a",
+        grid: "rgba(251,191,36,.06)",
+        border: "#f59e0b",
+        accent: "#fde68a"
+    },
+
+    "얼음": {
+        bg: "#041522",
+        board: "#0a2c40",
+        grid: "rgba(125,211,252,.07)",
+        border: "#38bdf8",
+        accent: "#bae6fd"
+    },
+
+    "우주": {
+        bg: "#060313",
+        board: "#100a27",
+        grid: "rgba(167,139,250,.07)",
+        border: "#8b5cf6",
+        accent: "#ddd6fe"
+    }
+
+};
+
+const THEME =
+    THEMES[CONFIG.theme];
+
+const SNAKE_COLOR =
+    COLORS[CONFIG.snakeColor];
 
 
 // ============================================================
 // CANVAS
 // ============================================================
 
-let width = 800;
-let height = 600;
+let W = 800;
+let H = 600;
 let cell = 20;
 
-function resizeCanvas() {
+function resize() {
 
-    const rect = canvas.getBoundingClientRect();
+    const r =
+        canvas.getBoundingClientRect();
 
-    const dpr = window.devicePixelRatio || 1;
+    const dpr =
+        window.devicePixelRatio || 1;
 
-    width = rect.width;
-    height = rect.height;
+    W = r.width;
+    H = r.height;
 
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
+    canvas.width =
+        W * dpr;
 
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    canvas.height =
+        H * dpr;
 
-    cell = Math.min(
-        width / GRID,
-        height / GRID
+    ctx.setTransform(
+        dpr,
+        0,
+        0,
+        dpr,
+        0,
+        0
     );
+
+    cell =
+        Math.min(
+            W / GRID,
+            H / GRID
+        );
+
 }
 
-window.addEventListener("resize", resizeCanvas);
+window.addEventListener(
+    "resize",
+    resize
+);
 
 
 // ============================================================
 // GAME STATE
 // ============================================================
 
-let snake;
-let direction;
-let nextDirection;
+let snake = [];
+let aiSnake = [];
 
-let foodPosition;
+let direction = {
+    x: 1,
+    y: 0
+};
+
+let nextDirection = {
+    x: 1,
+    y: 0
+};
+
+let aiDirection = {
+    x: -1,
+    y: 0
+};
+
+let foodPos = null;
 
 let score = 0;
 
-let best = Number(
-    localStorage.getItem("snakeWorldBest") || 0
-);
+let best =
+    Number(
+        localStorage.getItem(
+            "snakeWorldBest"
+        ) || 0
+    );
+
+let level = 1;
 
 let running = true;
 let paused = false;
 
-let lastUpdate = 0;
+let lastTime = 0;
 
-bestElement.textContent = best;
+let invincibleUntil = 0;
+let speedUntil = 0;
+
+let obstacleList = [];
+
+let particles = [];
+
+let stars = [];
+
+let mission = null;
+
+let missionDone = false;
+
+let evolutionStage = 1;
+
+let screenShake = 0;
 
 
 // ============================================================
-// AUDIO
+// MISSION SYSTEM
 // ============================================================
 
-let audioContext = null;
+const MISSIONS = [
 
-function playEatSound() {
+    {
+        text: "음식 5개 먹기",
+        type: "eat",
+        target: 5
+    },
 
-    try {
+    {
+        text: "점수 15점 만들기",
+        type: "score",
+        target: 15
+    },
 
-        if (!audioContext) {
-            audioContext =
-                new (window.AudioContext ||
-                window.webkitAudioContext)();
-        }
+    {
+        text: "길이 12 달성",
+        type: "length",
+        target: 12
+    },
 
-        const oscillator =
-            audioContext.createOscillator();
+    {
+        text: "음식 8개 연속 먹기",
+        type: "eat",
+        target: 8
+    }
 
-        const gain =
-            audioContext.createGain();
+];
 
-        oscillator.frequency.value = 520;
-        oscillator.type = "sine";
 
-        gain.gain.setValueAtTime(
-            0.08,
-            audioContext.currentTime
+let missionProgress = 0;
+
+
+function newMission() {
+
+    if (!CONFIG.missions) {
+
+        missionBox.style.display =
+            "none";
+
+        return;
+
+    }
+
+    missionBox.style.display =
+        "block";
+
+    mission =
+        MISSIONS[
+            Math.floor(
+                Math.random() *
+                MISSIONS.length
+            )
+        ];
+
+    missionProgress = 0;
+    missionDone = false;
+
+    updateMission();
+
+}
+
+
+function updateMission() {
+
+    if (
+        !CONFIG.missions ||
+        !mission
+    ) {
+        return;
+    }
+
+    if (mission.type === "eat") {
+
+        missionProgress =
+            Math.min(
+                mission.target,
+                score
+            );
+
+    }
+
+    if (mission.type === "score") {
+
+        missionProgress =
+            Math.min(
+                mission.target,
+                score
+            );
+
+    }
+
+    if (mission.type === "length") {
+
+        missionProgress =
+            Math.min(
+                mission.target,
+                snake.length
+            );
+
+    }
+
+    missionText.textContent =
+        `${mission.text}  ${missionProgress}/${mission.target}`;
+
+
+    if (
+        missionProgress >=
+        mission.target &&
+        !missionDone
+    ) {
+
+        missionDone = true;
+
+        score += 10;
+
+        statusEl.textContent =
+            "🎉 미션 완료! +10 보너스";
+
+        createParticles(
+            snake[0].x,
+            snake[0].y,
+            "#fbbf24",
+            30
         );
 
-        gain.gain.exponentialRampToValueAtTime(
-            0.001,
-            audioContext.currentTime + 0.15
+        setTimeout(
+            newMission,
+            1200
         );
 
-        oscillator.connect(gain);
-        gain.connect(audioContext.destination);
-
-        oscillator.start();
-
-        oscillator.stop(
-            audioContext.currentTime + 0.15
-        );
-
-    } catch (e) {}
+    }
 
 }
 
 
 // ============================================================
-// RANDOM FOOD
+// ACHIEVEMENTS
 // ============================================================
 
-function randomFood() {
+function unlockAchievement(
+    id,
+    title
+) {
 
-    let position;
+    const key =
+        "snakeAchievement_" + id;
 
-    do {
+    if (
+        localStorage.getItem(key)
+    ) {
+        return;
+    }
 
-        position = {
-            x: Math.floor(Math.random() * GRID),
-            y: Math.floor(Math.random() * GRID)
-        };
-
-    } while (
-        snake.some(
-            part =>
-                part.x === position.x &&
-                part.y === position.y
-        )
+    localStorage.setItem(
+        key,
+        "true"
     );
 
-    return position;
+    statusEl.textContent =
+        `🏆 업적 달성: ${title}`;
+
 }
 
 
 // ============================================================
-// START GAME
+// INIT
 // ============================================================
 
-function startGame() {
+function init() {
 
-    const center = Math.floor(GRID / 2);
+    resize();
+
+    const c =
+        Math.floor(GRID / 2);
 
     snake = [
 
         {
-            x: center,
-            y: center
+            x: c,
+            y: c
         },
 
         {
-            x: center - 1,
-            y: center
+            x: c - 1,
+            y: c
         },
 
         {
-            x: center - 2,
-            y: center
+            x: c - 2,
+            y: c
         }
 
     ];
+
+
+    if (
+        CONFIG.gameMode ===
+        "AI 대결"
+    ) {
+
+        aiSnake = [
+
+            {
+                x: GRID - 5,
+                y: GRID - 5
+            },
+
+            {
+                x: GRID - 4,
+                y: GRID - 5
+            },
+
+            {
+                x: GRID - 3,
+                y: GRID - 5
+            }
+
+        ];
+
+        aiDirection = {
+            x: -1,
+            y: 0
+        };
+
+    }
+
 
     direction = {
         x: 1,
@@ -817,27 +1388,46 @@ function startGame() {
         y: 0
     };
 
-    score = 0;
 
-    foodPosition = randomFood();
+    score = 0;
+    level = 1;
 
     running = true;
     paused = false;
 
-    overlay.style.display = "none";
+    invincibleUntil = 0;
+    speedUntil = 0;
 
-    pauseBtn.textContent = "⏸ 일시정지";
+    evolutionStage = 1;
 
-    messageElement.textContent =
-        "방향키로 움직이세요";
+    createObstacles();
+
+    createStars();
+
+    spawnFood();
+
+    newMission();
+
+    modeEl.textContent =
+        CONFIG.gameMode.toUpperCase();
+
+    bestEl.textContent = best;
 
     updateStats();
 
+    overlay.style.display =
+        "none";
+
+    statusEl.textContent =
+        "방향키로 이동하세요";
+
+    lastTime =
+        performance.now();
+
     canvas.focus();
 
-    lastUpdate = performance.now();
+    requestAnimationFrame(loop);
 
-    requestAnimationFrame(gameLoop);
 }
 
 
@@ -847,24 +1437,222 @@ function startGame() {
 
 function updateStats() {
 
-    scoreElement.textContent = score;
-    bestElement.textContent = best;
-    lengthElement.textContent = snake.length;
+    scoreEl.textContent =
+        score;
+
+    bestEl.textContent =
+        best;
+
+    lengthEl.textContent =
+        snake.length;
+
+    levelEl.textContent =
+        level;
 
 }
 
 
 // ============================================================
-// DIRECTION
+// OBSTACLES
 // ============================================================
 
-function changeDirection(dir) {
+function createObstacles() {
+
+    obstacleList = [];
+
+    if (!CONFIG.obstacles) {
+        return;
+    }
+
+    if (
+        CONFIG.gameMode ===
+        "클래식"
+    ) {
+        return;
+    }
+
+
+    let amount = 10;
+
+    if (
+        CONFIG.theme ===
+        "사막"
+    ) {
+        amount = 12;
+    }
+
+    if (
+        CONFIG.theme ===
+        "얼음"
+    ) {
+        amount = 8;
+    }
+
+    if (
+        CONFIG.theme ===
+        "우주"
+    ) {
+        amount = 6;
+    }
+
+
+    for (
+        let i = 0;
+        i < amount;
+        i++
+    ) {
+
+        let p;
+
+        let safe = false;
+
+        for (
+            let tries = 0;
+            tries < 100 && !safe;
+            tries++
+        ) {
+
+            p = {
+                x:
+                    Math.floor(
+                        Math.random() *
+                        GRID
+                    ),
+
+                y:
+                    Math.floor(
+                        Math.random() *
+                        GRID
+                    )
+            };
+
+            safe =
+                Math.abs(
+                    p.x -
+                    Math.floor(GRID / 2)
+                ) > 5 &&
+                Math.abs(
+                    p.y -
+                    Math.floor(GRID / 2)
+                ) > 5;
+
+            if (
+                obstacleList.some(
+                    o =>
+                        o.x === p.x &&
+                        o.y === p.y
+                )
+            ) {
+                safe = false;
+            }
+
+        }
+
+        if (safe) {
+            obstacleList.push(p);
+        }
+
+    }
+
+}
+
+
+// ============================================================
+// STARS
+// ============================================================
+
+function createStars() {
+
+    stars = [];
+
+    for (
+        let i = 0;
+        i < 70;
+        i++
+    ) {
+
+        stars.push({
+            x: Math.random(),
+            y: Math.random(),
+            r:
+                Math.random() * 1.5 +
+                0.4
+        });
+
+    }
+
+}
+
+
+// ============================================================
+// FOOD
+// ============================================================
+
+function spawnFood() {
+
+    let p;
+
+    do {
+
+        p = {
+
+            x:
+                Math.floor(
+                    Math.random() *
+                    GRID
+                ),
+
+            y:
+                Math.floor(
+                    Math.random() *
+                    GRID
+                )
+
+        };
+
+    } while (
+
+        snake.some(
+            s =>
+                s.x === p.x &&
+                s.y === p.y
+        )
+
+        ||
+
+        aiSnake.some(
+            s =>
+                s.x === p.x &&
+                s.y === p.y
+        )
+
+        ||
+
+        obstacleList.some(
+            o =>
+                o.x === p.x &&
+                o.y === p.y
+        )
+
+    );
+
+
+    foodPos = p;
+
+}
+
+
+// ============================================================
+// INPUT
+// ============================================================
+
+function setDirection(dir) {
 
     if (!running) {
         return;
     }
 
-    const directions = {
+    const dirs = {
 
         up: {
             x: 0,
@@ -888,180 +1676,296 @@ function changeDirection(dir) {
 
     };
 
-    const newDirection = directions[dir];
+    const nd = dirs[dir];
 
-    if (!newDirection) {
+    if (!nd) {
         return;
     }
 
 
-    // 180도 반전 방지
-
     if (
-        newDirection.x === -direction.x &&
-        newDirection.y === -direction.y
+        nd.x === -direction.x &&
+        nd.y === -direction.y
     ) {
         return;
     }
 
-    if (
-        newDirection.x === -nextDirection.x &&
-        newDirection.y === -nextDirection.y
-    ) {
-        return;
-    }
+    nextDirection = nd;
 
-    nextDirection = newDirection;
+}
+
+
+document.addEventListener(
+    "keydown",
+    e => {
+
+        const key =
+            e.key.toLowerCase();
+
+        if (
+            [
+                "arrowup",
+                "arrowdown",
+                "arrowleft",
+                "arrowright",
+                " ",
+                "w",
+                "a",
+                "s",
+                "d"
+            ].includes(key)
+        ) {
+            e.preventDefault();
+        }
+
+
+        if (
+            key === "arrowup" ||
+            key === "w"
+        ) {
+            setDirection("up");
+        }
+
+        if (
+            key === "arrowdown" ||
+            key === "s"
+        ) {
+            setDirection("down");
+        }
+
+        if (
+            key === "arrowleft" ||
+            key === "a"
+        ) {
+            setDirection("left");
+        }
+
+        if (
+            key === "arrowright" ||
+            key === "d"
+        ) {
+            setDirection("right");
+        }
+
+        if (key === " ") {
+            togglePause();
+        }
+
+    }
+);
+
+
+document
+    .querySelectorAll(
+        ".mobile button"
+    )
+    .forEach(
+        button => {
+
+            button.addEventListener(
+                "pointerdown",
+                e => {
+
+                    e.preventDefault();
+
+                    setDirection(
+                        button.dataset.dir
+                    );
+
+                    canvas.focus();
+
+                }
+            );
+
+        }
+    );
+
+
+// ============================================================
+// COLLISION
+// ============================================================
+
+function obstacleCollision(p) {
+
+    return obstacleList.some(
+        o =>
+            o.x === p.x &&
+            o.y === p.y
+    );
+
+}
+
+
+function selfCollision(p) {
+
+    return snake.some(
+        s =>
+            s.x === p.x &&
+            s.y === p.y
+    );
+
+}
+
+
+function aiCollision(p) {
+
+    return aiSnake.some(
+        s =>
+            s.x === p.x &&
+            s.y === p.y
+    );
+
 }
 
 
 // ============================================================
-// KEYBOARD
+// PLAYER UPDATE
 // ============================================================
 
-document.addEventListener("keydown", function(event) {
-
-    const key = event.key;
-
-    if (
-        [
-            "ArrowUp",
-            "ArrowDown",
-            "ArrowLeft",
-            "ArrowRight",
-            " "
-        ].includes(key)
-    ) {
-        event.preventDefault();
-    }
-
-
-    if (key === "ArrowUp") {
-        changeDirection("up");
-    }
-
-    else if (key === "ArrowDown") {
-        changeDirection("down");
-    }
-
-    else if (key === "ArrowLeft") {
-        changeDirection("left");
-    }
-
-    else if (key === "ArrowRight") {
-        changeDirection("right");
-    }
-
-    else if (key === " ") {
-        togglePause();
-    }
-
-});
-
-
-// ============================================================
-// MOBILE CONTROLS
-// ============================================================
-
-document
-    .querySelectorAll(".mobile-btn")
-    .forEach(button => {
-
-        button.addEventListener(
-            "pointerdown",
-            function(event) {
-
-                event.preventDefault();
-
-                changeDirection(
-                    button.dataset.dir
-                );
-
-                canvas.focus();
-
-            }
-        );
-
-    });
-
-
-// ============================================================
-// GAME UPDATE
-// ============================================================
-
-function updateGame() {
+function updatePlayer() {
 
     direction = {
         ...nextDirection
     };
 
-    const head = {
-        x: snake[0].x + direction.x,
-        y: snake[0].y + direction.y
+
+    let head = {
+
+        x:
+            snake[0].x +
+            direction.x,
+
+        y:
+            snake[0].y +
+            direction.y
+
     };
 
 
-    // 벽 충돌
+    // SPACE MAP = WRAP
 
     if (
-        head.x < 0 ||
-        head.x >= GRID ||
-        head.y < 0 ||
-        head.y >= GRID
+        CONFIG.theme ===
+        "우주"
     ) {
 
-        gameOver();
-        return;
+        if (head.x < 0)
+            head.x = GRID - 1;
+
+        if (head.x >= GRID)
+            head.x = 0;
+
+        if (head.y < 0)
+            head.y = GRID - 1;
+
+        if (head.y >= GRID)
+            head.y = 0;
+
+    }
+
+    else {
+
+        if (
+            head.x < 0 ||
+            head.x >= GRID ||
+            head.y < 0 ||
+            head.y >= GRID
+        ) {
+
+            gameOver(
+                "벽에 부딪혔습니다!"
+            );
+
+            return;
+
+        }
+
     }
 
 
-    // 몸 충돌
-
-    const ateFood =
-        head.x === foodPosition.x &&
-        head.y === foodPosition.y;
-
-    const collisionBody =
-        ateFood
-            ? snake
-            : snake.slice(0, -1);
-
     if (
-        collisionBody.some(
-            part =>
-                part.x === head.x &&
-                part.y === head.y
-        )
+        obstacleCollision(head)
     ) {
 
-        gameOver();
-        return;
+        if (
+            CONFIG.theme ===
+            "우주"
+        ) {
+
+            // 우주에서는 장애물을 통과
+            // 하지 못함
+
+        }
+
+        if (
+            Date.now() >
+            invincibleUntil
+        ) {
+
+            gameOver(
+                "장애물에 부딪혔습니다!"
+            );
+
+            return;
+
+        }
+
+    }
+
+
+    if (
+        selfCollision(head)
+    ) {
+
+        if (
+            Date.now() >
+            invincibleUntil
+        ) {
+
+            gameOver(
+                "내 몸에 부딪혔습니다!"
+            );
+
+            return;
+
+        }
+
+    }
+
+
+    if (
+        CONFIG.gameMode ===
+        "AI 대결" &&
+        aiCollision(head)
+    ) {
+
+        if (
+            Date.now() >
+            invincibleUntil
+        ) {
+
+            gameOver(
+                "AI 뱀과 충돌했습니다!"
+            );
+
+            return;
+
+        }
+
     }
 
 
     snake.unshift(head);
 
 
-    // 먹이
+    const ate =
+        head.x === foodPos.x &&
+        head.y === foodPos.y;
 
-    if (ateFood) {
 
-        score++;
+    if (ate) {
 
-        if (score > best) {
-
-            best = score;
-
-            localStorage.setItem(
-                "snakeWorldBest",
-                best
-            );
-
-        }
-
-        foodPosition = randomFood();
-
-        playEatSound();
+        eatFood();
 
     }
 
@@ -1071,7 +1975,651 @@ function updateGame() {
 
     }
 
+
+    // LEVEL
+
+    level =
+        Math.floor(
+            score / 10
+        ) + 1;
+
+
+    // EVOLUTION
+
+    if (
+        CONFIG.evolution
+    ) {
+
+        const newStage =
+            snake.length >= 25
+                ? 4
+                : snake.length >= 16
+                    ? 3
+                    : snake.length >= 9
+                        ? 2
+                        : 1;
+
+        if (
+            newStage >
+            evolutionStage
+        ) {
+
+            evolutionStage =
+                newStage;
+
+            statusEl.textContent =
+                evolutionStage === 2
+                    ? "🌱 성장했습니다!"
+                    : evolutionStage === 3
+                        ? "🔥 진화했습니다!"
+                        : "🐉 최종 진화!";
+
+            createParticles(
+                snake[0].x,
+                snake[0].y,
+                "#fbbf24",
+                45
+            );
+
+        }
+
+    }
+
+
+    updateMission();
+
+}
+
+
+// ============================================================
+// FOOD EFFECT
+// ============================================================
+
+function eatFood() {
+
+    const data =
+        FOOD[CONFIG.food];
+
+
+    let grow =
+        CONFIG.specialFood
+            ? data.grow
+            : 1;
+
+    let points =
+        CONFIG.specialFood
+            ? data.points
+            : 1;
+
+
+    score += points;
+
+
+    // 성장 추가
+
+    for (
+        let i = 1;
+        i < grow;
+        i++
+    ) {
+
+        const tail =
+            snake[snake.length - 1];
+
+        snake.push({
+            x: tail.x,
+            y: tail.y
+        });
+
+    }
+
+
+    if (
+        CONFIG.specialFood
+    ) {
+
+        if (
+            CONFIG.food ===
+            "체리"
+        ) {
+
+            speedUntil =
+                Date.now() + 4000;
+
+            powerText.textContent =
+                "⚡ SPEED UP";
+
+        }
+
+
+        if (
+            CONFIG.food ===
+            "햄버거"
+        ) {
+
+            speedUntil =
+                Date.now() + 3000;
+
+            powerText.textContent =
+                "🍔 HEAVY MODE";
+
+        }
+
+
+        if (
+            CONFIG.food ===
+            "치즈"
+        ) {
+
+            invincibleUntil =
+                Date.now() + 3000;
+
+            powerText.textContent =
+                "🛡️ 무적";
+
+        }
+
+
+        if (
+            CONFIG.food ===
+            "고추"
+        ) {
+
+            speedUntil =
+                Date.now() + 5000;
+
+            powerText.textContent =
+                "🔥 TURBO";
+
+        }
+
+
+        if (
+            CONFIG.food ===
+            "황금사과"
+        ) {
+
+            createParticles(
+                foodPos.x,
+                foodPos.y,
+                "#facc15",
+                45
+            );
+
+            unlockAchievement(
+                "gold",
+                "황금 사냥꾼"
+            );
+
+        }
+
+    }
+
+
+    if (
+        score > best
+    ) {
+
+        best = score;
+
+        localStorage.setItem(
+            "snakeWorldBest",
+            best
+        );
+
+    }
+
+
+    createParticles(
+        foodPos.x,
+        foodPos.y,
+        "#ffffff",
+        18
+    );
+
+
+    if (
+        snake.length >= 10
+    ) {
+
+        unlockAchievement(
+            "ten",
+            "작은 거인"
+        );
+
+    }
+
+
+    if (
+        snake.length >= 25
+    ) {
+
+        unlockAchievement(
+            "giant",
+            "거대 생명체"
+        );
+
+    }
+
+
+    if (
+        score >= 50
+    ) {
+
+        unlockAchievement(
+            "fifty",
+            "폭식가"
+        );
+
+    }
+
+
+    statusEl.textContent =
+        CONFIG.specialFood
+            ? `${data.emoji} ${data.effect}`
+            : "🍴 먹이를 먹었습니다!";
+
+
+    spawnFood();
+
     updateStats();
+
+}
+
+
+// ============================================================
+// AI
+// ============================================================
+
+function updateAI() {
+
+    if (
+        CONFIG.gameMode !==
+        "AI 대결"
+    ) {
+        return;
+    }
+
+
+    if (
+        aiSnake.length === 0
+    ) {
+        return;
+    }
+
+
+    const head =
+        aiSnake[0];
+
+
+    const dx =
+        foodPos.x -
+        head.x;
+
+    const dy =
+        foodPos.y -
+        head.y;
+
+
+    const candidates = [];
+
+
+    if (
+        Math.abs(dx) >=
+        Math.abs(dy)
+    ) {
+
+        if (dx !== 0) {
+
+            candidates.push({
+                x: Math.sign(dx),
+                y: 0
+            });
+
+        }
+
+        if (dy !== 0) {
+
+            candidates.push({
+                x: 0,
+                y: Math.sign(dy)
+            });
+
+        }
+
+    }
+
+    else {
+
+        if (dy !== 0) {
+
+            candidates.push({
+                x: 0,
+                y: Math.sign(dy)
+            });
+
+        }
+
+        if (dx !== 0) {
+
+            candidates.push({
+                x: Math.sign(dx),
+                y: 0
+            });
+
+        }
+
+    }
+
+
+    candidates.push(
+        {x: 1, y: 0},
+        {x: -1, y: 0},
+        {x: 0, y: 1},
+        {x: 0, y: -1}
+    );
+
+
+    let chosen = aiDirection;
+
+
+    if (
+        CONFIG.aiLevel === "상"
+    ) {
+
+        for (
+            const c of candidates
+        ) {
+
+            if (
+                validAIMove(c)
+            ) {
+
+                chosen = c;
+                break;
+
+            }
+
+        }
+
+    }
+
+    else if (
+        CONFIG.aiLevel === "중"
+    ) {
+
+        const good =
+            candidates.filter(
+                validAIMove
+            );
+
+        if (
+            good.length
+        ) {
+
+            chosen =
+                good[
+                    Math.floor(
+                        Math.random() *
+                        good.length
+                    )
+                ];
+
+        }
+
+    }
+
+    else {
+
+        if (
+            Math.random() <
+            0.65
+        ) {
+
+            const good =
+                candidates.filter(
+                    validAIMove
+                );
+
+            if (
+                good.length
+            ) {
+
+                chosen =
+                    good[
+                        Math.floor(
+                            Math.random() *
+                            good.length
+                        )
+                    ];
+
+            }
+
+        }
+
+    }
+
+
+    if (
+        chosen.x === -aiDirection.x &&
+        chosen.y === -aiDirection.y
+    ) {
+
+        chosen = aiDirection;
+
+    }
+
+
+    aiDirection = chosen;
+
+
+    let next = {
+
+        x:
+            head.x +
+            aiDirection.x,
+
+        y:
+            head.y +
+            aiDirection.y
+
+    };
+
+
+    if (
+        CONFIG.theme ===
+        "우주"
+    ) {
+
+        if (next.x < 0)
+            next.x = GRID - 1;
+
+        if (next.x >= GRID)
+            next.x = 0;
+
+        if (next.y < 0)
+            next.y = GRID - 1;
+
+        if (next.y >= GRID)
+            next.y = 0;
+
+    }
+
+
+    if (
+        next.x < 0 ||
+        next.x >= GRID ||
+        next.y < 0 ||
+        next.y >= GRID
+    ) {
+
+        return;
+
+    }
+
+
+    if (
+        obstacleCollision(next)
+    ) {
+
+        return;
+
+    }
+
+
+    aiSnake.unshift(next);
+
+
+    const ate =
+        next.x === foodPos.x &&
+        next.y === foodPos.y;
+
+
+    if (!ate) {
+
+        aiSnake.pop();
+
+    }
+
+    else {
+
+        // AI가 먹으면
+        // 새로운 먹이가 생김
+
+        spawnFood();
+
+    }
+
+
+    // AI와 플레이어 충돌
+
+    if (
+        snake.some(
+            s =>
+                s.x === next.x &&
+                s.y === next.y
+        )
+    ) {
+
+        gameOver(
+            "AI 뱀과 충돌했습니다!"
+        );
+
+    }
+
+}
+
+
+function validAIMove(dir) {
+
+    const h =
+        aiSnake[0];
+
+    const p = {
+
+        x:
+            h.x + dir.x,
+
+        y:
+            h.y + dir.y
+
+    };
+
+
+    if (
+        CONFIG.theme ===
+        "우주"
+    ) {
+
+        if (p.x < 0)
+            p.x = GRID - 1;
+
+        if (p.x >= GRID)
+            p.x = 0;
+
+        if (p.y < 0)
+            p.y = GRID - 1;
+
+        if (p.y >= GRID)
+            p.y = 0;
+
+    }
+
+
+    if (
+        p.x < 0 ||
+        p.x >= GRID ||
+        p.y < 0 ||
+        p.y >= GRID
+    ) {
+
+        return false;
+
+    }
+
+
+    if (
+        obstacleCollision(p)
+    ) {
+
+        return false;
+
+    }
+
+
+    if (
+        aiSnake.some(
+            s =>
+                s.x === p.x &&
+                s.y === p.y
+        )
+    ) {
+
+        return false;
+
+    }
+
+
+    return true;
+
+}
+
+
+// ============================================================
+// AI GAME OVER CHECK
+// ============================================================
+
+function checkAIFinish() {
+
+    if (
+        CONFIG.gameMode !==
+        "AI 대결"
+    ) {
+        return;
+    }
+
+
+    if (
+        aiSnake.length >=
+        20 &&
+        snake.length < 5
+    ) {
+
+        // 단순 압박
+        // 플레이어는 계속 가능
+
+    }
+
+
+    if (
+        aiSnake.length >= 30
+    ) {
+
+        gameOver(
+            "🤖 AI가 먼저 거대해졌습니다!"
+        );
+
+    }
 
 }
 
@@ -1080,16 +2628,31 @@ function updateGame() {
 // GAME OVER
 // ============================================================
 
-function gameOver() {
+function gameOver(reason) {
+
+    if (!running) {
+        return;
+    }
 
     running = false;
 
-    finalScore.textContent = score;
+    overTitle.textContent =
+        "💥 GAME OVER";
 
-    overlay.style.display = "flex";
+    overText.textContent =
+        `${reason}  ·  점수 ${score}`;
 
-    messageElement.textContent =
-        "게임이 끝났습니다";
+    overlay.style.display =
+        "flex";
+
+    statusEl.textContent =
+        reason;
+
+
+    unlockAchievement(
+        "first",
+        "첫 번째 생존"
+    );
 
 }
 
@@ -1106,129 +2669,185 @@ function togglePause() {
 
     paused = !paused;
 
+
     if (paused) {
 
-        pauseBtn.textContent =
-            "▶ 계속하기";
+        statusEl.textContent =
+            "⏸ 일시정지";
 
-        messageElement.textContent =
-            "일시정지됨";
+        document.getElementById(
+            "pause"
+        ).textContent =
+            "▶ 계속하기";
 
     }
 
     else {
 
-        pauseBtn.textContent =
-            "⏸ 일시정지";
-
-        messageElement.textContent =
+        statusEl.textContent =
             "게임 진행 중";
 
-        lastUpdate = performance.now();
+        document.getElementById(
+            "pause"
+        ).textContent =
+            "⏸ 일시정지";
+
+        lastTime =
+            performance.now();
 
     }
 
 }
 
 
-// ============================================================
-// BUTTONS
-// ============================================================
+document.getElementById(
+    "pause"
+).onclick =
+    togglePause;
 
-pauseBtn.addEventListener(
-    "click",
-    togglePause
-);
 
-restartBtn.addEventListener(
-    "click",
-    startGame
-);
+document.getElementById(
+    "restart"
+).onclick =
+    init;
 
-overlayRestart.addEventListener(
-    "click",
-    startGame
-);
+
+document.getElementById(
+    "overRestart"
+).onclick =
+    init;
 
 
 // ============================================================
-// BACKGROUND
+// PARTICLES
+// ============================================================
+
+function createParticles(
+    gx,
+    gy,
+    color,
+    amount
+) {
+
+    for (
+        let i = 0;
+        i < amount;
+        i++
+    ) {
+
+        particles.push({
+
+            x: gx + 0.5,
+            y: gy + 0.5,
+
+            vx:
+                (Math.random() - .5)
+                * .16,
+
+            vy:
+                (Math.random() - .5)
+                * .16,
+
+            life: 1,
+
+            color: color
+
+        });
+
+    }
+
+}
+
+
+function updateParticles() {
+
+    particles =
+        particles.filter(
+            p => {
+
+                p.x += p.vx;
+                p.y += p.vy;
+
+                p.life -= .035;
+
+                return p.life > 0;
+
+            }
+        );
+
+}
+
+
+// ============================================================
+// DRAW BACKGROUND
 // ============================================================
 
 function drawBackground() {
 
-    ctx.fillStyle = theme.background;
+    ctx.fillStyle =
+        THEME.bg;
 
     ctx.fillRect(
         0,
         0,
-        width,
-        height
+        W,
+        H
     );
 
 
-    // board
+    const bw =
+        GRID * cell;
 
-    const boardWidth = GRID * cell;
-    const boardHeight = GRID * cell;
+    const bh =
+        GRID * cell;
 
-    const offsetX =
-        (width - boardWidth) / 2;
+    const ox =
+        (W - bw) / 2;
 
-    const offsetY =
-        (height - boardHeight) / 2;
+    const oy =
+        (H - bh) / 2;
 
 
-    ctx.fillStyle = theme.board;
+    ctx.fillStyle =
+        THEME.board;
 
     ctx.beginPath();
 
     ctx.roundRect(
-        offsetX,
-        offsetY,
-        boardWidth,
-        boardHeight,
-        18
+        ox,
+        oy,
+        bw,
+        bh,
+        20
     );
 
     ctx.fill();
 
 
-    // grid
+    // GRID
 
-    ctx.strokeStyle = theme.grid;
+    ctx.strokeStyle =
+        THEME.grid;
+
     ctx.lineWidth = 1;
 
-    for (let x = 0; x <= GRID; x++) {
+
+    for (
+        let x = 0;
+        x <= GRID;
+        x++
+    ) {
 
         ctx.beginPath();
 
         ctx.moveTo(
-            offsetX + x * cell,
-            offsetY
+            ox + x * cell,
+            oy
         );
 
         ctx.lineTo(
-            offsetX + x * cell,
-            offsetY + boardHeight
-        );
-
-        ctx.stroke();
-
-    }
-
-    for (let y = 0; y <= GRID; y++) {
-
-        ctx.beginPath();
-
-        ctx.moveTo(
-            offsetX,
-            offsetY + y * cell
-        );
-
-        ctx.lineTo(
-            offsetX + boardWidth,
-            offsetY + y * cell
+            ox + x * cell,
+            oy + bh
         );
 
         ctx.stroke();
@@ -1236,22 +2855,49 @@ function drawBackground() {
     }
 
 
-    // border
+    for (
+        let y = 0;
+        y <= GRID;
+        y++
+    ) {
 
-    ctx.strokeStyle = theme.border;
+        ctx.beginPath();
+
+        ctx.moveTo(
+            ox,
+            oy + y * cell
+        );
+
+        ctx.lineTo(
+            ox + bw,
+            oy + y * cell
+        );
+
+        ctx.stroke();
+
+    }
+
+
+    // BORDER
+
+    ctx.strokeStyle =
+        THEME.border;
+
     ctx.lineWidth = 3;
 
-    ctx.shadowColor = theme.glow;
+    ctx.shadowColor =
+        THEME.border;
+
     ctx.shadowBlur = 20;
 
     ctx.beginPath();
 
     ctx.roundRect(
-        offsetX,
-        offsetY,
-        boardWidth,
-        boardHeight,
-        18
+        ox,
+        oy,
+        bw,
+        bh,
+        20
     );
 
     ctx.stroke();
@@ -1259,91 +2905,45 @@ function drawBackground() {
     ctx.shadowBlur = 0;
 
 
-    drawThemeDecoration(
-        offsetX,
-        offsetY,
-        boardWidth,
-        boardHeight
+    // THEME DETAILS
+
+    drawThemeDetails(
+        ox,
+        oy,
+        bw,
+        bh
     );
 
 }
 
 
-function drawThemeDecoration(
-    offsetX,
-    offsetY,
-    boardWidth,
-    boardHeight
+function drawThemeDetails(
+    ox,
+    oy,
+    bw,
+    bh
 ) {
 
     ctx.save();
 
-    ctx.globalAlpha = 0.25;
+    if (
+        CONFIG.theme ===
+        "우주"
+    ) {
 
-    if (CONFIG.theme === "숲") {
+        for (
+            const s of stars
+        ) {
 
-        drawTree(
-            offsetX + 25,
-            offsetY + 25
-        );
-
-        drawTree(
-            offsetX + boardWidth - 25,
-            offsetY + 40
-        );
-
-    }
-
-    else if (CONFIG.theme === "사막") {
-
-        drawCactus(
-            offsetX + 25,
-            offsetY + 35
-        );
-
-        drawCactus(
-            offsetX + boardWidth - 30,
-            offsetY + 45
-        );
-
-    }
-
-    else if (CONFIG.theme === "얼음") {
-
-        drawSnowflake(
-            offsetX + 30,
-            offsetY + 30
-        );
-
-        drawSnowflake(
-            offsetX + boardWidth - 30,
-            offsetY + 40
-        );
-
-    }
-
-    else if (CONFIG.theme === "우주") {
-
-        for (let i = 0; i < 30; i++) {
-
-            const sx =
-                offsetX +
-                Math.random() *
-                boardWidth;
-
-            const sy =
-                offsetY +
-                Math.random() *
-                boardHeight;
-
-            ctx.fillStyle = "#ffffff";
+            ctx.fillStyle =
+                "rgba(255,255,255,.7)";
 
             ctx.beginPath();
 
             ctx.arc(
-                sx,
-                sy,
-                Math.random() * 1.5,
+                ox + s.x * bw,
+                oy + s.y * bh,
+                s.r,
                 0,
                 Math.PI * 2
             );
@@ -1354,21 +2954,76 @@ function drawThemeDecoration(
 
     }
 
+
+    if (
+        CONFIG.theme ===
+        "숲"
+    ) {
+
+        drawTree(
+            ox + 28,
+            oy + 28
+        );
+
+        drawTree(
+            ox + bw - 28,
+            oy + 35
+        );
+
+    }
+
+
+    if (
+        CONFIG.theme ===
+        "사막"
+    ) {
+
+        drawCactus(
+            ox + 30,
+            oy + 35
+        );
+
+        drawCactus(
+            ox + bw - 30,
+            oy + 40
+        );
+
+    }
+
+
+    if (
+        CONFIG.theme ===
+        "얼음"
+    ) {
+
+        drawIceCrystal(
+            ox + 30,
+            oy + 30
+        );
+
+        drawIceCrystal(
+            ox + bw - 30,
+            oy + 40
+        );
+
+    }
+
     ctx.restore();
 
 }
 
 
-function drawTree(x, y) {
+function drawTree(x,y) {
 
-    ctx.fillStyle = "#166534";
+    ctx.fillStyle =
+        "#166534";
 
     ctx.beginPath();
 
     ctx.arc(
         x,
         y,
-        16,
+        15,
         0,
         Math.PI * 2
     );
@@ -1376,63 +3031,74 @@ function drawTree(x, y) {
     ctx.fill();
 
     ctx.fillRect(
-        x - 4,
-        y + 10,
-        8,
+        x - 3,
+        y + 9,
+        6,
         14
     );
 
 }
 
 
-function drawCactus(x, y) {
+function drawCactus(x,y) {
 
-    ctx.fillStyle = "#65a30d";
+    ctx.fillStyle =
+        "#65a30d";
 
     ctx.fillRect(
-        x - 5,
+        x - 4,
         y - 15,
-        10,
+        8,
         35
     );
 
     ctx.fillRect(
-        x - 16,
-        y - 4,
+        x - 14,
+        y - 2,
         10,
-        8
+        7
     );
 
     ctx.fillRect(
-        x + 6,
-        y - 10,
+        x + 4,
+        y - 9,
         10,
-        8
+        7
     );
 
 }
 
 
-function drawSnowflake(x, y) {
+function drawIceCrystal(x,y) {
 
-    ctx.strokeStyle = "#bae6fd";
+    ctx.strokeStyle =
+        "#bae6fd";
+
     ctx.lineWidth = 2;
 
-    for (let i = 0; i < 3; i++) {
+    for (
+        let i = 0;
+        i < 3;
+        i++
+    ) {
 
-        const angle =
+        const a =
             i * Math.PI / 3;
 
         ctx.beginPath();
 
         ctx.moveTo(
-            x - Math.cos(angle) * 14,
-            y - Math.sin(angle) * 14
+            x -
+            Math.cos(a) * 14,
+            y -
+            Math.sin(a) * 14
         );
 
         ctx.lineTo(
-            x + Math.cos(angle) * 14,
-            y + Math.sin(angle) * 14
+            x +
+            Math.cos(a) * 14,
+            y +
+            Math.sin(a) * 14
         );
 
         ctx.stroke();
@@ -1443,242 +3109,49 @@ function drawSnowflake(x, y) {
 
 
 // ============================================================
-// FOOD
+// DRAW OBSTACLES
 // ============================================================
 
-function drawFood() {
-
-    const boardWidth = GRID * cell;
-    const boardHeight = GRID * cell;
-
-    const offsetX =
-        (width - boardWidth) / 2;
-
-    const offsetY =
-        (height - boardHeight) / 2;
-
-    const x =
-        offsetX +
-        foodPosition.x * cell +
-        cell / 2;
-
-    const y =
-        offsetY +
-        foodPosition.y * cell +
-        cell / 2;
-
-
-    // glow
-
-    ctx.save();
-
-    ctx.shadowColor = theme.border;
-    ctx.shadowBlur = 18;
-
-    ctx.font =
-        `${Math.max(20, cell * 0.82)}px Arial`;
-
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-
-    ctx.fillText(
-        FOOD_EMOJI[CONFIG.food],
-        x,
-        y
-    );
-
-    ctx.restore();
-
-}
-
-
-// ============================================================
-// SNAKE
-// ============================================================
-
-function getSegmentColor(index) {
-
-    if (CONFIG.snake_style === "무지개") {
-
-        const hue =
-            (index * 35 + score * 8) % 360;
-
-        return `hsl(${hue}, 85%, 55%)`;
-
-    }
-
-
-    if (CONFIG.snake_style === "네온") {
-
-        const base =
-            snakeColor;
-
-        return index % 2 === 0
-            ? base
-            : lightenColor(base, 25);
-
-    }
-
-
-    if (index === 0) {
-
-        return lightenColor(
-            snakeColor,
-            15
-        );
-
-    }
-
-
-    return darkenColor(
-        snakeColor,
-        Math.min(
-            35,
-            index * 2
-        )
-    );
-
-}
-
-
-function lightenColor(hex, amount) {
-
-    const num =
-        parseInt(hex.slice(1), 16);
-
-    let r =
-        Math.min(
-            255,
-            ((num >> 16) & 255) + amount
-        );
-
-    let g =
-        Math.min(
-            255,
-            ((num >> 8) & 255) + amount
-        );
-
-    let b =
-        Math.min(
-            255,
-            (num & 255) + amount
-        );
-
-    return `rgb(${r},${g},${b})`;
-
-}
-
-
-function darkenColor(hex, amount) {
-
-    const num =
-        parseInt(hex.slice(1), 16);
-
-    let r =
-        Math.max(
-            0,
-            ((num >> 16) & 255) - amount
-        );
-
-    let g =
-        Math.max(
-            0,
-            ((num >> 8) & 255) - amount
-        );
-
-    let b =
-        Math.max(
-            0,
-            (num & 255) - amount
-        );
-
-    return `rgb(${r},${g},${b})`;
-
-}
-
-
-function drawSnake() {
-
-    const boardWidth = GRID * cell;
-    const boardHeight = GRID * cell;
-
-    const offsetX =
-        (width - boardWidth) / 2;
-
-    const offsetY =
-        (height - boardHeight) / 2;
-
-
-    // tail -> head
+function drawObstacles() {
 
     for (
-        let i = snake.length - 1;
-        i >= 0;
-        i--
+        const o of obstacleList
     ) {
 
-        const part = snake[i];
-
-        const cx =
-            offsetX +
-            part.x * cell +
-            cell / 2;
-
-        const cy =
-            offsetY +
-            part.y * cell +
-            cell / 2;
-
-        const radius =
-            cell * 0.39;
-
+        const p =
+            gridToPixel(o.x,o.y);
 
         ctx.save();
 
-        if (CONFIG.snake_style === "네온") {
-
-            ctx.shadowColor =
-                getSegmentColor(i);
-
-            ctx.shadowBlur = 16;
-
-        }
-
-
-        ctx.fillStyle =
-            getSegmentColor(i);
-
-
-        // body segment
-
-        ctx.beginPath();
-
-        ctx.arc(
-            cx,
-            cy,
-            radius,
-            0,
-            Math.PI * 2
-        );
-
-        ctx.fill();
-
-
-        // segment highlight
-
         if (
-            CONFIG.snake_style !== "클래식"
+            CONFIG.theme ===
+            "숲"
         ) {
 
             ctx.fillStyle =
-                "rgba(255,255,255,0.14)";
+                "#475569";
 
             ctx.beginPath();
 
             ctx.arc(
-                cx - radius * 0.28,
-                cy - radius * 0.28,
-                radius * 0.25,
+                p.x,
+                p.y,
+                cell * .34,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fill();
+
+            ctx.fillStyle =
+                "#64748b";
+
+            ctx.beginPath();
+
+            ctx.arc(
+                p.x - cell*.1,
+                p.y - cell*.1,
+                cell*.13,
                 0,
                 Math.PI * 2
             );
@@ -1687,82 +3160,485 @@ function drawSnake() {
 
         }
 
+        else if (
+            CONFIG.theme ===
+            "사막"
+        ) {
+
+            ctx.fillStyle =
+                "#a16207";
+
+            ctx.fillRect(
+                p.x - cell*.18,
+                p.y - cell*.35,
+                cell*.36,
+                cell*.7
+            );
+
+        }
+
+        else if (
+            CONFIG.theme ===
+            "얼음"
+        ) {
+
+            ctx.fillStyle =
+                "#67e8f9";
+
+            ctx.globalAlpha = .7;
+
+            ctx.beginPath();
+
+            ctx.moveTo(
+                p.x,
+                p.y - cell*.4
+            );
+
+            ctx.lineTo(
+                p.x + cell*.35,
+                p.y
+            );
+
+            ctx.lineTo(
+                p.x,
+                p.y + cell*.4
+            );
+
+            ctx.lineTo(
+                p.x - cell*.35,
+                p.y
+            );
+
+            ctx.closePath();
+
+            ctx.fill();
+
+        }
+
+        else {
+
+            ctx.fillStyle =
+                "#64748b";
+
+            ctx.beginPath();
+
+            ctx.arc(
+                p.x,
+                p.y,
+                cell*.33,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fill();
+
+        }
 
         ctx.restore();
 
     }
 
+}
 
-    drawHead(
-        offsetX,
-        offsetY
-    );
+
+// ============================================================
+// GRID POSITION
+// ============================================================
+
+function gridToPixel(x,y) {
+
+    const bw =
+        GRID * cell;
+
+    const bh =
+        GRID * cell;
+
+    const ox =
+        (W - bw) / 2;
+
+    const oy =
+        (H - bh) / 2;
+
+    return {
+
+        x:
+            ox +
+            x * cell +
+            cell / 2,
+
+        y:
+            oy +
+            y * cell +
+            cell / 2
+
+    };
 
 }
 
 
-function drawHead(
-    offsetX,
-    offsetY
-) {
+// ============================================================
+// FOOD DRAW
+// ============================================================
 
-    const head = snake[0];
+function drawFood() {
 
-    const cx =
-        offsetX +
-        head.x * cell +
-        cell / 2;
+    const p =
+        gridToPixel(
+            foodPos.x,
+            foodPos.y
+        );
 
-    const cy =
-        offsetY +
-        head.y * cell +
-        cell / 2;
 
-    const radius =
-        cell * 0.46;
+    const data =
+        FOOD[CONFIG.food];
 
 
     ctx.save();
 
-    if (CONFIG.snake_style === "네온") {
 
-        ctx.shadowColor =
-            snakeColor;
+    const pulse =
+        1 +
+        Math.sin(
+            performance.now() / 180
+        ) * .08;
 
-        ctx.shadowBlur = 22;
+
+    ctx.shadowColor =
+        THEME.accent;
+
+    ctx.shadowBlur = 22;
+
+
+    ctx.font =
+        `${cell * .85 * pulse}px Arial`;
+
+    ctx.textAlign =
+        "center";
+
+    ctx.textBaseline =
+        "middle";
+
+
+    ctx.fillText(
+        data.emoji,
+        p.x,
+        p.y
+    );
+
+
+    ctx.restore();
+
+}
+
+
+// ============================================================
+// COLOR UTILITIES
+// ============================================================
+
+function hexToRgb(hex) {
+
+    const n =
+        parseInt(
+            hex.slice(1),
+            16
+        );
+
+    return {
+
+        r:
+            (n >> 16) & 255,
+
+        g:
+            (n >> 8) & 255,
+
+        b:
+            n & 255
+
+    };
+
+}
+
+
+function shade(
+    hex,
+    amount
+) {
+
+    const c =
+        hexToRgb(hex);
+
+    return `rgb(
+        ${Math.max(
+            0,
+            Math.min(
+                255,
+                c.r + amount
+            )
+        )},
+        ${Math.max(
+            0,
+            Math.min(
+                255,
+                c.g + amount
+            )
+        )},
+        ${Math.max(
+            0,
+            Math.min(
+                255,
+                c.b + amount
+            )
+        )}
+    )`;
+
+}
+
+
+// ============================================================
+// SNAKE STYLE COLOR
+// ============================================================
+
+function segmentColor(i) {
+
+    if (
+        CONFIG.snakeStyle ===
+        "무지개"
+    ) {
+
+        return `
+            hsl(
+                ${(i * 35 + score * 8) % 360},
+                85%,
+                58%
+            )
+        `;
 
     }
 
 
-    // head
+    if (
+        CONFIG.snakeStyle ===
+        "사이버"
+    ) {
+
+        return i % 2 === 0
+            ? "#22d3ee"
+            : "#8b5cf6";
+
+    }
+
+
+    if (
+        CONFIG.snakeStyle ===
+        "드래곤"
+    ) {
+
+        return i % 3 === 0
+            ? shade(
+                SNAKE_COLOR,
+                30
+            )
+            : shade(
+                SNAKE_COLOR,
+                -10
+            );
+
+    }
+
+
+    if (
+        CONFIG.snakeStyle ===
+        "코브라"
+    ) {
+
+        return i === 0
+            ? shade(
+                SNAKE_COLOR,
+                30
+            )
+            : shade(
+                SNAKE_COLOR,
+                i % 2
+                    ? -15
+                    : 10
+            );
+
+    }
+
+
+    if (
+        CONFIG.snakeStyle ===
+        "지렁이"
+    ) {
+
+        return i % 2 === 0
+            ? shade(
+                SNAKE_COLOR,
+                15
+            )
+            : shade(
+                SNAKE_COLOR,
+                -8
+            );
+
+    }
+
+
+    return i === 0
+        ? shade(
+            SNAKE_COLOR,
+            25
+        )
+        : shade(
+            SNAKE_COLOR,
+            -Math.min(
+                35,
+                i * 2
+            )
+        );
+
+}
+
+
+// ============================================================
+// DRAW PLAYER SNAKE
+// ============================================================
+
+function drawSnake() {
+
+    for (
+        let i =
+            snake.length - 1;
+        i >= 0;
+        i--
+    ) {
+
+        drawSegment(
+            snake[i],
+            i,
+            false
+        );
+
+    }
+
+    drawHead();
+
+}
+
+
+// ============================================================
+// DRAW SEGMENT
+// ============================================================
+
+function drawSegment(
+    part,
+    index,
+    ai
+) {
+
+    const p =
+        gridToPixel(
+            part.x,
+            part.y
+        );
+
+
+    let radius =
+        cell * .38;
+
+
+    if (
+        CONFIG.snakeStyle ===
+        "지렁이"
+    ) {
+
+        radius =
+            cell * .42;
+
+    }
+
+
+    if (
+        CONFIG.snakeStyle ===
+        "드래곤"
+    ) {
+
+        radius =
+            cell * .39;
+
+    }
+
+
+    if (
+        CONFIG.snakeStyle ===
+        "사이버"
+    ) {
+
+        radius =
+            cell * .35;
+
+    }
+
+
+    const color =
+        ai
+            ? (
+                index % 2
+                    ? "#ef4444"
+                    : "#fb7185"
+            )
+            : segmentColor(index);
+
+
+    ctx.save();
+
+
+    if (
+        CONFIG.snakeStyle ===
+        "사이버"
+        &&
+        !ai
+    ) {
+
+        ctx.shadowColor =
+            color;
+
+        ctx.shadowBlur = 16;
+
+    }
+
+
+    // BODY
 
     const gradient =
         ctx.createRadialGradient(
-            cx - radius * 0.35,
-            cy - radius * 0.4,
+            p.x - radius*.35,
+            p.y - radius*.4,
             1,
-            cx,
-            cy,
+            p.x,
+            p.y,
             radius
         );
 
     gradient.addColorStop(
         0,
-        lightenColor(snakeColor, 35)
+        shade(color,35)
     );
 
     gradient.addColorStop(
         1,
-        snakeColor
+        color
     );
 
-    ctx.fillStyle = gradient;
+    ctx.fillStyle =
+        gradient;
+
 
     ctx.beginPath();
 
     ctx.arc(
-        cx,
-        cy,
+        p.x,
+        p.y,
         radius,
         0,
         Math.PI * 2
@@ -1771,108 +3647,509 @@ function drawHead(
     ctx.fill();
 
 
-    // eyes position
+    // BODY PATTERN
 
-    let eyeOffsetX = 0;
-    let eyeOffsetY = 0;
+    if (
+        CONFIG.snakeStyle ===
+        "코브라"
+        &&
+        !ai
+    ) {
 
-    if (direction.x !== 0) {
+        ctx.strokeStyle =
+            "rgba(0,0,0,.28)";
 
-        eyeOffsetX =
-            direction.x * radius * 0.45;
-
-        eyeOffsetY =
-            radius * 0.27;
-
-    }
-
-    else {
-
-        eyeOffsetX =
-            radius * 0.27;
-
-        eyeOffsetY =
-            direction.y * radius * 0.45;
-
-    }
-
-
-    // eyes
-
-    drawEye(
-        cx + eyeOffsetX,
-        cy + eyeOffsetY
-    );
-
-    drawEye(
-        cx + eyeOffsetX,
-        cy - eyeOffsetY
-    );
-
-
-    // tongue
-
-    if (CONFIG.snake_style !== "클래식") {
-
-        ctx.strokeStyle = "#fda4af";
-        ctx.lineWidth = 1.7;
-        ctx.lineCap = "round";
-
-        const tongueStartX =
-            cx +
-            direction.x *
-            radius *
-            0.75;
-
-        const tongueStartY =
-            cy +
-            direction.y *
-            radius *
-            0.75;
-
-        const tongueEndX =
-            cx +
-            direction.x *
-            radius *
-            1.25;
-
-        const tongueEndY =
-            cy +
-            direction.y *
-            radius *
-            1.25;
+        ctx.lineWidth = 2;
 
         ctx.beginPath();
 
-        ctx.moveTo(
-            tongueStartX,
-            tongueStartY
-        );
-
-        ctx.lineTo(
-            tongueEndX,
-            tongueEndY
+        ctx.arc(
+            p.x,
+            p.y,
+            radius * .7,
+            0,
+            Math.PI * 2
         );
 
         ctx.stroke();
 
     }
 
+
+    if (
+        CONFIG.snakeStyle ===
+        "사이버"
+        &&
+        !ai
+    ) {
+
+        ctx.strokeStyle =
+            "#67e8f9";
+
+        ctx.lineWidth = 1;
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            p.x - radius*.5,
+            p.y
+        );
+
+        ctx.lineTo(
+            p.x + radius*.5,
+            p.y
+        );
+
+        ctx.moveTo(
+            p.x,
+            p.y - radius*.5
+        );
+
+        ctx.lineTo(
+            p.x,
+            p.y + radius*.5
+        );
+
+        ctx.stroke();
+
+    }
+
+
+    if (
+        CONFIG.snakeStyle ===
+        "드래곤"
+        &&
+        !ai
+    ) {
+
+        ctx.fillStyle =
+            "#fbbf24";
+
+        ctx.beginPath();
+
+        ctx.arc(
+            p.x,
+            p.y,
+            radius*.13,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+
+    }
+
+
+    // HIGHLIGHT
+
+    ctx.fillStyle =
+        "rgba(255,255,255,.14)";
+
+    ctx.beginPath();
+
+    ctx.arc(
+        p.x - radius*.3,
+        p.y - radius*.3,
+        radius*.23,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+
     ctx.restore();
 
 }
 
 
-function drawEye(x, y) {
+// ============================================================
+// DRAW PLAYER HEAD
+// ============================================================
 
-    ctx.fillStyle = "#ffffff";
+function drawHead() {
+
+    const h =
+        snake[0];
+
+    const p =
+        gridToPixel(
+            h.x,
+            h.y
+        );
+
+
+    let r =
+        cell * .46;
+
+
+    if (
+        CONFIG.snakeStyle ===
+        "지렁이"
+    ) {
+
+        r =
+            cell * .44;
+
+    }
+
+
+    if (
+        CONFIG.snakeStyle ===
+        "코브라"
+    ) {
+
+        r =
+            cell * .52;
+
+    }
+
+
+    if (
+        CONFIG.snakeStyle ===
+        "드래곤"
+    ) {
+
+        r =
+            cell * .49;
+
+    }
+
+
+    ctx.save();
+
+
+    if (
+        CONFIG.snakeStyle ===
+        "사이버"
+    ) {
+
+        ctx.shadowColor =
+            "#22d3ee";
+
+        ctx.shadowBlur = 25;
+
+    }
+
+
+    const g =
+        ctx.createRadialGradient(
+            p.x-r*.3,
+            p.y-r*.4,
+            1,
+            p.x,
+            p.y,
+            r
+        );
+
+    g.addColorStop(
+        0,
+        shade(
+            SNAKE_COLOR,
+            45
+        )
+    );
+
+    g.addColorStop(
+        1,
+        SNAKE_COLOR
+    );
+
+    ctx.fillStyle = g;
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+        p.x,
+        p.y,
+        r,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+
+    // ========================================================
+    // DRAGON HORNS
+    // ========================================================
+
+    if (
+        CONFIG.snakeStyle ===
+        "드래곤"
+        ||
+        (
+            CONFIG.evolution &&
+            evolutionStage >= 4
+        )
+    ) {
+
+        ctx.fillStyle =
+            "#f8fafc";
+
+        drawHorn(
+            p.x - r*.55,
+            p.y - r*.65,
+            -1
+        );
+
+        drawHorn(
+            p.x + r*.55,
+            p.y - r*.65,
+            1
+        );
+
+    }
+
+
+    // ========================================================
+    // COBRA HOOD
+    // ========================================================
+
+    if (
+        CONFIG.snakeStyle ===
+        "코브라"
+    ) {
+
+        ctx.strokeStyle =
+            shade(
+                SNAKE_COLOR,
+                35
+            );
+
+        ctx.lineWidth = 5;
+
+        ctx.beginPath();
+
+        ctx.arc(
+            p.x,
+            p.y,
+            r * 1.2,
+            Math.PI * .2,
+            Math.PI * .8
+        );
+
+        ctx.stroke();
+
+    }
+
+
+    // ========================================================
+    // EYES
+    // ========================================================
+
+    let ex = 0;
+    let ey = 0;
+
+
+    if (
+        direction.x !== 0
+    ) {
+
+        ex =
+            direction.x *
+            r*.45;
+
+        ey =
+            r*.27;
+
+    }
+
+    else {
+
+        ex =
+            r*.27;
+
+        ey =
+            direction.y *
+            r*.45;
+
+    }
+
+
+    drawEye(
+        p.x + ex,
+        p.y + ey
+    );
+
+    drawEye(
+        p.x + ex,
+        p.y - ey
+    );
+
+
+    // ========================================================
+    // TONGUE
+    // ========================================================
+
+    if (
+        CONFIG.snakeStyle !==
+        "지렁이"
+    ) {
+
+        ctx.strokeStyle =
+            "#fb7185";
+
+        ctx.lineWidth = 1.8;
+
+        ctx.lineCap =
+            "round";
+
+
+        const sx =
+            p.x +
+            direction.x *
+            r*.75;
+
+        const sy =
+            p.y +
+            direction.y *
+            r*.75;
+
+
+        const tx =
+            p.x +
+            direction.x *
+            r*1.2;
+
+        const ty =
+            p.y +
+            direction.y *
+            r*1.2;
+
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            sx,
+            sy
+        );
+
+        ctx.lineTo(
+            tx,
+            ty
+        );
+
+        ctx.stroke();
+
+
+        if (
+            CONFIG.snakeStyle ===
+            "코브라"
+            ||
+            CONFIG.snakeStyle ===
+            "드래곤"
+        ) {
+
+            ctx.beginPath();
+
+            ctx.moveTo(
+                tx,
+                ty
+            );
+
+            ctx.lineTo(
+                tx -
+                direction.y *
+                cell*.15,
+
+                ty +
+                direction.x *
+                cell*.15
+            );
+
+            ctx.stroke();
+
+        }
+
+    }
+
+
+    // ========================================================
+    // EVOLUTION BADGE
+    // ========================================================
+
+    if (
+        CONFIG.evolution &&
+        evolutionStage >= 3
+    ) {
+
+        ctx.fillStyle =
+            evolutionStage >= 4
+                ? "#fbbf24"
+                : "#f97316";
+
+        ctx.beginPath();
+
+        ctx.arc(
+            p.x -
+            direction.y * r*.7,
+            p.y +
+            direction.x * r*.7,
+            cell*.07,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+
+    }
+
+
+    ctx.restore();
+
+}
+
+
+function drawHorn(
+    x,
+    y,
+    side
+) {
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        x,
+        y
+    );
+
+    ctx.lineTo(
+        x +
+        side * cell*.18,
+        y -
+        cell*.25
+    );
+
+    ctx.lineTo(
+        x +
+        side * cell*.12,
+        y +
+        cell*.02
+    );
+
+    ctx.closePath();
+
+    ctx.fill();
+
+}
+
+
+function drawEye(
+    x,
+    y
+) {
+
+    ctx.fillStyle =
+        "#ffffff";
 
     ctx.beginPath();
 
     ctx.arc(
         x,
         y,
-        cell * 0.105,
+        cell*.105,
         0,
         Math.PI * 2
     );
@@ -1880,19 +4157,142 @@ function drawEye(x, y) {
     ctx.fill();
 
 
-    ctx.fillStyle = "#111827";
+    ctx.fillStyle =
+        "#111827";
 
     ctx.beginPath();
 
     ctx.arc(
-        x + direction.x * cell * 0.025,
-        y + direction.y * cell * 0.025,
-        cell * 0.055,
+        x +
+        direction.x *
+        cell*.025,
+
+        y +
+        direction.y *
+        cell*.025,
+
+        cell*.055,
+
         0,
         Math.PI * 2
     );
 
     ctx.fill();
+
+}
+
+
+// ============================================================
+// DRAW AI
+// ============================================================
+
+function drawAI() {
+
+    if (
+        CONFIG.gameMode !==
+        "AI 대결"
+    ) {
+        return;
+    }
+
+
+    for (
+        let i =
+            aiSnake.length - 1;
+        i >= 0;
+        i--
+    ) {
+
+        drawSegment(
+            aiSnake[i],
+            i,
+            true
+        );
+
+    }
+
+
+    if (
+        aiSnake.length === 0
+    ) {
+        return;
+    }
+
+
+    const h =
+        aiSnake[0];
+
+    const p =
+        gridToPixel(
+            h.x,
+            h.y
+        );
+
+
+    ctx.save();
+
+    ctx.fillStyle =
+        "#f87171";
+
+    ctx.font =
+        `${cell*.32}px Arial`;
+
+    ctx.textAlign =
+        "center";
+
+    ctx.fillText(
+        "AI",
+        p.x,
+        p.y - cell*.62
+    );
+
+    ctx.restore();
+
+}
+
+
+// ============================================================
+// DRAW PARTICLES
+// ============================================================
+
+function drawParticles() {
+
+    for (
+        const p of particles
+    ) {
+
+        const pos =
+            gridToPixel(
+                p.x,
+                p.y
+            );
+
+        ctx.save();
+
+        ctx.globalAlpha =
+            Math.max(
+                0,
+                p.life
+            );
+
+        ctx.fillStyle =
+            p.color;
+
+        ctx.beginPath();
+
+        ctx.arc(
+            pos.x,
+            pos.y,
+            cell*.07,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+
+        ctx.restore();
+
+    }
 
 }
 
@@ -1903,13 +4303,19 @@ function drawEye(x, y) {
 
 function draw() {
 
-    resizeCanvas();
+    resize();
 
     drawBackground();
 
+    drawObstacles();
+
     drawFood();
 
+    drawAI();
+
     drawSnake();
+
+    drawParticles();
 
 }
 
@@ -1918,7 +4324,7 @@ function draw() {
 // GAME LOOP
 // ============================================================
 
-function gameLoop(timestamp) {
+function loop(timestamp) {
 
     if (!running) {
 
@@ -1929,17 +4335,113 @@ function gameLoop(timestamp) {
     }
 
 
-    if (!paused) {
+    const baseSpeed =
+        SPEEDS[
+            CONFIG.difficulty
+        ];
+
+
+    let currentSpeed =
+        baseSpeed;
+
+
+    // SPECIAL FOOD SPEED
+
+    if (
+        Date.now() <
+        speedUntil
+    ) {
 
         if (
-            timestamp - lastUpdate >= speed
+            CONFIG.food ===
+            "햄버거"
         ) {
 
-            updateGame();
-
-            lastUpdate = timestamp;
+            currentSpeed *=
+                1.45;
 
         }
+
+        else {
+
+            currentSpeed *=
+                .62;
+
+        }
+
+    }
+
+    else {
+
+        powerText.textContent =
+            "특별 효과 없음";
+
+    }
+
+
+    // ICE SLIDE
+
+    let moves =
+        1;
+
+    if (
+        CONFIG.theme ===
+        "얼음"
+        &&
+        CONFIG.gameMode !==
+        "클래식"
+    ) {
+
+        if (
+            direction.x !== 0 ||
+            direction.y !== 0
+        ) {
+
+            moves = 1;
+
+        }
+
+    }
+
+
+    if (
+        !paused &&
+        timestamp -
+        lastTime >=
+        currentSpeed
+    ) {
+
+        updatePlayer();
+
+        if (
+            CONFIG.gameMode ===
+            "AI 대결"
+        ) {
+
+            const aiSpeed =
+                AI_SPEEDS[
+                    CONFIG.aiLevel
+                ];
+
+            if (
+                timestamp -
+                lastTime >=
+                aiSpeed
+            ) {
+
+                updateAI();
+
+            }
+
+            checkAIFinish();
+
+        }
+
+
+        updateParticles();
+
+        lastTime =
+            timestamp;
 
     }
 
@@ -1947,7 +4449,7 @@ function gameLoop(timestamp) {
     draw();
 
     requestAnimationFrame(
-        gameLoop
+        loop
     );
 
 }
@@ -1957,9 +4459,7 @@ function gameLoop(timestamp) {
 // START
 // ============================================================
 
-resizeCanvas();
-
-startGame();
+init();
 
 </script>
 
@@ -1976,6 +4476,6 @@ html = html.replace(
 
 components.html(
     html,
-    height=760,
+    height=790,
     scrolling=False
 )
