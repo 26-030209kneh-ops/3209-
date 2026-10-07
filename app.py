@@ -178,6 +178,35 @@ obstacles = st.sidebar.toggle(
 )
 
 
+# ============================================================
+# MUSIC SETTINGS
+# ============================================================
+
+st.sidebar.markdown("---")
+
+music_enabled = st.sidebar.toggle(
+    "🎵 배경음악",
+    value=True,
+)
+
+music_volume = st.sidebar.slider(
+    "🔊 음악 볼륨",
+    min_value=0,
+    max_value=100,
+    value=35,
+    step=5,
+)
+
+sound_effects = st.sidebar.toggle(
+    "🔔 효과음",
+    value=True,
+)
+
+
+# ============================================================
+# AI
+# ============================================================
+
 ai_level = "중"
 
 if game_mode == "AI 대결":
@@ -204,6 +233,12 @@ st.sidebar.markdown(
 **↑ ↓ ← →** 이동  
 **W A S D** 이동  
 **Space** 일시정지
+
+### 🎵 음악
+
+게임 화면에서  
+**음악 시작** 버튼을 누르면  
+배경음악이 재생됩니다.
 
 ### 🍴 특수 음식
 
@@ -234,6 +269,9 @@ config = {
     "evolution": evolution,
     "obstacles": obstacles,
     "aiLevel": ai_level,
+    "musicEnabled": music_enabled,
+    "musicVolume": music_volume,
+    "soundEffects": sound_effects,
 }
 
 config_json = json.dumps(
@@ -260,7 +298,7 @@ st.markdown(
 
 
 # ============================================================
-# GAME
+# GAME HTML
 # ============================================================
 
 html = r"""
@@ -289,6 +327,7 @@ body {
 body {
     background: #020617;
     color: white;
+
     font-family:
         -apple-system,
         BlinkMacSystemFont,
@@ -304,8 +343,10 @@ body {
     width: 100%;
     max-width: 1150px;
     height: 100%;
+
     display: flex;
     flex-direction: column;
+
     gap: 10px;
 }
 
@@ -417,6 +458,8 @@ body {
 .buttons {
     display: flex;
     gap: 7px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .game-btn {
@@ -431,6 +474,18 @@ body {
 
 .game-btn:hover {
     background: #334155;
+}
+
+.music-btn {
+    background:
+        linear-gradient(
+            135deg,
+            #7c3aed,
+            #2563eb
+        );
+
+    border-color:
+        rgba(167,139,250,.5);
 }
 
 .mobile {
@@ -602,6 +657,30 @@ body {
     pointer-events: none;
 }
 
+.music-indicator {
+    position: absolute;
+
+    right: 20px;
+    bottom: 75px;
+
+    padding: 8px 12px;
+
+    border-radius: 10px;
+
+    background:
+        rgba(15,23,42,.85);
+
+    border:
+        1px solid
+        rgba(255,255,255,.1);
+
+    color: #cbd5e1;
+
+    font-size: 11px;
+
+    pointer-events: none;
+}
+
 @media(max-width:700px) {
 
     .top {
@@ -640,9 +719,11 @@ body {
     }
 
     .mission,
-    .power {
+    .power,
+    .music-indicator {
         display: none;
     }
+
 }
 
 </style>
@@ -670,7 +751,8 @@ body {
                     SNAKE WORLD
                 </div>
 
-                <div class="mode" id="modeText">
+                <div class="mode"
+                     id="modeText">
                     CLASSIC
                 </div>
 
@@ -741,7 +823,9 @@ body {
     </div>
 
 
-    <canvas id="canvas" tabindex="0"></canvas>
+    <canvas id="canvas"
+            tabindex="0">
+    </canvas>
 
 
     <div class="mission"
@@ -762,10 +846,17 @@ body {
     <div class="power"
          id="powerBox">
 
-        ⚡ <span id="powerText">
+        ⚡
+        <span id="powerText">
             특별 효과 없음
         </span>
 
+    </div>
+
+
+    <div class="music-indicator"
+         id="musicIndicator">
+        🎵 음악 대기 중
     </div>
 
 
@@ -802,6 +893,11 @@ body {
         </div>
 
         <div class="buttons">
+
+            <button class="game-btn music-btn"
+                    id="musicButton">
+                🎵 음악 시작
+            </button>
 
             <button class="game-btn"
                     id="pause">
@@ -901,6 +997,555 @@ const missionText =
 const powerText =
     document.getElementById("powerText");
 
+const musicButton =
+    document.getElementById("musicButton");
+
+const musicIndicator =
+    document.getElementById("musicIndicator");
+
+
+// ============================================================
+// AUDIO SYSTEM
+// ============================================================
+
+let audioContext = null;
+
+let masterGain = null;
+
+let musicGain = null;
+
+let musicTimer = null;
+
+let musicPlaying = false;
+
+let musicStep = 0;
+
+
+/*
+    외부 음악 파일을 사용하지 않고
+    Web Audio API로 게임용 배경음악을 생성합니다.
+
+    따라서 별도의 mp3 파일을 GitHub에 넣지 않아도
+    바로 작동합니다.
+*/
+
+
+const melody = [
+    261.63,
+    329.63,
+    392.00,
+    329.63,
+    293.66,
+    349.23,
+    440.00,
+    349.23
+];
+
+
+const bass = [
+    130.81,
+    130.81,
+    146.83,
+    146.83,
+    164.81,
+    164.81,
+    146.83,
+    146.83
+];
+
+
+function setupAudio() {
+
+    if (audioContext) {
+        return;
+    }
+
+    audioContext =
+        new (
+            window.AudioContext ||
+            window.webkitAudioContext
+        )();
+
+    masterGain =
+        audioContext.createGain();
+
+    musicGain =
+        audioContext.createGain();
+
+    masterGain.gain.value = 0.9;
+
+    musicGain.gain.value =
+        CONFIG.musicVolume / 100 * 0.20;
+
+    musicGain.connect(masterGain);
+
+    masterGain.connect(
+        audioContext.destination
+    );
+
+}
+
+
+function playTone(
+    frequency,
+    duration,
+    type,
+    volume,
+    destination
+) {
+
+    if (!audioContext) {
+        return;
+    }
+
+    const oscillator =
+        audioContext.createOscillator();
+
+    const gain =
+        audioContext.createGain();
+
+    oscillator.type =
+        type;
+
+    oscillator.frequency.value =
+        frequency;
+
+    gain.gain.setValueAtTime(
+        0,
+        audioContext.currentTime
+    );
+
+    gain.gain.linearRampToValueAtTime(
+        volume,
+        audioContext.currentTime + 0.015
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+        0.001,
+        audioContext.currentTime +
+        duration
+    );
+
+    oscillator.connect(gain);
+
+    gain.connect(
+        destination
+    );
+
+    oscillator.start();
+
+    oscillator.stop(
+        audioContext.currentTime +
+        duration +
+        0.02
+    );
+
+}
+
+
+function musicTick() {
+
+    if (
+        !musicPlaying ||
+        !audioContext
+    ) {
+        return;
+    }
+
+    const now =
+        audioContext.currentTime;
+
+    const note =
+        melody[
+            musicStep %
+            melody.length
+        ];
+
+    const bassNote =
+        bass[
+            musicStep %
+            bass.length
+        ];
+
+
+    const osc =
+        audioContext.createOscillator();
+
+    const gain =
+        audioContext.createGain();
+
+
+    osc.type = "sine";
+
+    osc.frequency.setValueAtTime(
+        note,
+        now
+    );
+
+    gain.gain.setValueAtTime(
+        0,
+        now
+    );
+
+    gain.gain.linearRampToValueAtTime(
+        0.055,
+        now + 0.025
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+        0.001,
+        now + 0.42
+    );
+
+
+    osc.connect(gain);
+
+    gain.connect(
+        musicGain
+    );
+
+    osc.start(now);
+
+    osc.stop(
+        now + 0.45
+    );
+
+
+    // BASS
+
+    const bassOsc =
+        audioContext.createOscillator();
+
+    const bassGain =
+        audioContext.createGain();
+
+
+    bassOsc.type =
+        "triangle";
+
+    bassOsc.frequency.setValueAtTime(
+        bassNote,
+        now
+    );
+
+    bassGain.gain.setValueAtTime(
+        0,
+        now
+    );
+
+    bassGain.gain.linearRampToValueAtTime(
+        0.035,
+        now + 0.02
+    );
+
+    bassGain.gain.exponentialRampToValueAtTime(
+        0.001,
+        now + 0.48
+    );
+
+
+    bassOsc.connect(
+        bassGain
+    );
+
+    bassGain.connect(
+        musicGain
+    );
+
+    bassOsc.start(now);
+
+    bassOsc.stop(
+        now + 0.5
+    );
+
+
+    musicStep++;
+
+}
+
+
+function startMusic() {
+
+    if (!CONFIG.musicEnabled) {
+
+        statusEl.textContent =
+            "🎵 사이드바에서 음악을 켜주세요";
+
+        return;
+
+    }
+
+
+    setupAudio();
+
+
+    if (
+        audioContext.state ===
+        "suspended"
+    ) {
+
+        audioContext.resume();
+
+    }
+
+
+    if (musicPlaying) {
+        return;
+    }
+
+
+    musicPlaying = true;
+
+    musicStep = 0;
+
+
+    musicTimer =
+        setInterval(
+            musicTick,
+            500
+        );
+
+
+    musicTick();
+
+
+    musicButton.textContent =
+        "🔇 음악 끄기";
+
+    musicIndicator.textContent =
+        "🎵 BGM ON";
+
+}
+
+
+function stopMusic() {
+
+    musicPlaying = false;
+
+
+    if (musicTimer) {
+
+        clearInterval(
+            musicTimer
+        );
+
+        musicTimer = null;
+
+    }
+
+
+    musicButton.textContent =
+        "🎵 음악 시작";
+
+    musicIndicator.textContent =
+        "🎵 음악 OFF";
+
+}
+
+
+function toggleMusic() {
+
+    if (musicPlaying) {
+
+        stopMusic();
+
+    }
+
+    else {
+
+        startMusic();
+
+    }
+
+}
+
+
+function soundEffect(
+    type
+) {
+
+    if (
+        !CONFIG.soundEffects
+    ) {
+        return;
+    }
+
+
+    setupAudio();
+
+
+    if (
+        audioContext.state ===
+        "suspended"
+    ) {
+
+        audioContext.resume();
+
+    }
+
+
+    if (type === "eat") {
+
+        playTone(
+            520,
+            0.10,
+            "sine",
+            0.12,
+            masterGain
+        );
+
+        setTimeout(
+            () => {
+
+                playTone(
+                    780,
+                    0.12,
+                    "sine",
+                    0.10,
+                    masterGain
+                );
+
+            },
+            55
+        );
+
+    }
+
+
+    if (type === "mission") {
+
+        playTone(
+            523.25,
+            0.12,
+            "triangle",
+            0.14,
+            masterGain
+        );
+
+        setTimeout(
+            () => {
+
+                playTone(
+                    659.25,
+                    0.12,
+                    "triangle",
+                    0.14,
+                    masterGain
+                );
+
+            },
+            100
+        );
+
+        setTimeout(
+            () => {
+
+                playTone(
+                    783.99,
+                    0.20,
+                    "triangle",
+                    0.14,
+                    masterGain
+                );
+
+            },
+            200
+        );
+
+    }
+
+
+    if (type === "gameover") {
+
+        playTone(
+            392,
+            0.18,
+            "sawtooth",
+            0.10,
+            masterGain
+        );
+
+        setTimeout(
+            () => {
+
+                playTone(
+                    293.66,
+                    0.25,
+                    "sawtooth",
+                    0.10,
+                    masterGain
+                );
+
+            },
+            160
+        );
+
+        setTimeout(
+            () => {
+
+                playTone(
+                    196,
+                    0.35,
+                    "sawtooth",
+                    0.08,
+                    masterGain
+                );
+
+            },
+            350
+        );
+
+    }
+
+
+    if (type === "evolution") {
+
+        playTone(
+            440,
+            0.10,
+            "square",
+            0.08,
+            masterGain
+        );
+
+        setTimeout(
+            () => {
+
+                playTone(
+                    554.37,
+                    0.10,
+                    "square",
+                    0.08,
+                    masterGain
+                );
+
+            },
+            100
+        );
+
+        setTimeout(
+            () => {
+
+                playTone(
+                    659.25,
+                    0.16,
+                    "square",
+                    0.08,
+                    masterGain
+                );
+
+            },
+            200
+        );
+
+    }
+
+}
+
+
+musicButton.onclick =
+    toggleMusic;
+
 
 // ============================================================
 // CONSTANTS
@@ -908,18 +1553,25 @@ const powerText =
 
 const GRID = 30;
 
+
 const SPEEDS = {
+
     "쉬움": 155,
     "보통": 110,
     "어려움": 78,
     "지옥": 52
+
 };
 
+
 const AI_SPEEDS = {
+
     "하": 145,
     "중": 105,
     "상": 72
+
 };
+
 
 const COLORS = {
 
@@ -932,6 +1584,7 @@ const COLORS = {
     "민트": "#2dd4bf"
 
 };
+
 
 const FOOD = {
 
@@ -1034,6 +1687,7 @@ const THEMES = {
 
 };
 
+
 const THEME =
     THEMES[CONFIG.theme];
 
@@ -1046,8 +1700,11 @@ const SNAKE_COLOR =
 // ============================================================
 
 let W = 800;
+
 let H = 600;
+
 let cell = 20;
+
 
 function resize() {
 
@@ -1058,6 +1715,7 @@ function resize() {
         window.devicePixelRatio || 1;
 
     W = r.width;
+
     H = r.height;
 
     canvas.width =
@@ -1083,6 +1741,7 @@ function resize() {
 
 }
 
+
 window.addEventListener(
     "resize",
     resize
@@ -1094,6 +1753,7 @@ window.addEventListener(
 // ============================================================
 
 let snake = [];
+
 let aiSnake = [];
 
 let direction = {
@@ -1125,11 +1785,13 @@ let best =
 let level = 1;
 
 let running = true;
+
 let paused = false;
 
 let lastTime = 0;
 
 let invincibleUntil = 0;
+
 let speedUntil = 0;
 
 let obstacleList = [];
@@ -1144,11 +1806,9 @@ let missionDone = false;
 
 let evolutionStage = 1;
 
-let screenShake = 0;
-
 
 // ============================================================
-// MISSION SYSTEM
+// MISSIONS
 // ============================================================
 
 const MISSIONS = [
@@ -1197,6 +1857,7 @@ function newMission() {
     missionBox.style.display =
         "block";
 
+
     mission =
         MISSIONS[
             Math.floor(
@@ -1205,7 +1866,9 @@ function newMission() {
             )
         ];
 
+
     missionProgress = 0;
+
     missionDone = false;
 
     updateMission();
@@ -1222,7 +1885,10 @@ function updateMission() {
         return;
     }
 
-    if (mission.type === "eat") {
+
+    if (
+        mission.type === "eat"
+    ) {
 
         missionProgress =
             Math.min(
@@ -1232,7 +1898,10 @@ function updateMission() {
 
     }
 
-    if (mission.type === "score") {
+
+    if (
+        mission.type === "score"
+    ) {
 
         missionProgress =
             Math.min(
@@ -1242,7 +1911,10 @@ function updateMission() {
 
     }
 
-    if (mission.type === "length") {
+
+    if (
+        mission.type === "length"
+    ) {
 
         missionProgress =
             Math.min(
@@ -1251,6 +1923,7 @@ function updateMission() {
             );
 
     }
+
 
     missionText.textContent =
         `${mission.text}  ${missionProgress}/${mission.target}`;
@@ -1268,6 +1941,10 @@ function updateMission() {
 
         statusEl.textContent =
             "🎉 미션 완료! +10 보너스";
+
+        soundEffect(
+            "mission"
+        );
 
         createParticles(
             snake[0].x,
@@ -1298,16 +1975,21 @@ function unlockAchievement(
     const key =
         "snakeAchievement_" + id;
 
+
     if (
         localStorage.getItem(key)
     ) {
+
         return;
+
     }
+
 
     localStorage.setItem(
         key,
         "true"
     );
+
 
     statusEl.textContent =
         `🏆 업적 달성: ${title}`;
@@ -1323,8 +2005,12 @@ function init() {
 
     resize();
 
+
     const c =
-        Math.floor(GRID / 2);
+        Math.floor(
+            GRID / 2
+        );
+
 
     snake = [
 
@@ -1370,6 +2056,7 @@ function init() {
 
         ];
 
+
         aiDirection = {
             x: -1,
             y: 0
@@ -1383,6 +2070,7 @@ function init() {
         y: 0
     };
 
+
     nextDirection = {
         x: 1,
         y: 0
@@ -1390,15 +2078,19 @@ function init() {
 
 
     score = 0;
+
     level = 1;
 
     running = true;
+
     paused = false;
 
     invincibleUntil = 0;
+
     speedUntil = 0;
 
     evolutionStage = 1;
+
 
     createObstacles();
 
@@ -1408,25 +2100,36 @@ function init() {
 
     newMission();
 
+
     modeEl.textContent =
         CONFIG.gameMode.toUpperCase();
 
-    bestEl.textContent = best;
+
+    bestEl.textContent =
+        best;
+
 
     updateStats();
+
 
     overlay.style.display =
         "none";
 
+
     statusEl.textContent =
         "방향키로 이동하세요";
+
 
     lastTime =
         performance.now();
 
+
     canvas.focus();
 
-    requestAnimationFrame(loop);
+
+    requestAnimationFrame(
+        loop
+    );
 
 }
 
@@ -1460,39 +2163,52 @@ function createObstacles() {
 
     obstacleList = [];
 
+
     if (!CONFIG.obstacles) {
         return;
     }
+
 
     if (
         CONFIG.gameMode ===
         "클래식"
     ) {
+
         return;
+
     }
 
 
     let amount = 10;
 
+
     if (
         CONFIG.theme ===
         "사막"
     ) {
+
         amount = 12;
+
     }
+
 
     if (
         CONFIG.theme ===
         "얼음"
     ) {
+
         amount = 8;
+
     }
+
 
     if (
         CONFIG.theme ===
         "우주"
     ) {
+
         amount = 6;
+
     }
 
 
@@ -1506,13 +2222,16 @@ function createObstacles() {
 
         let safe = false;
 
+
         for (
             let tries = 0;
-            tries < 100 && !safe;
+            tries < 100 &&
+            !safe;
             tries++
         ) {
 
             p = {
+
                 x:
                     Math.floor(
                         Math.random() *
@@ -1524,17 +2243,25 @@ function createObstacles() {
                         Math.random() *
                         GRID
                     )
+
             };
+
 
             safe =
                 Math.abs(
                     p.x -
-                    Math.floor(GRID / 2)
+                    Math.floor(
+                        GRID / 2
+                    )
                 ) > 5 &&
+
                 Math.abs(
                     p.y -
-                    Math.floor(GRID / 2)
+                    Math.floor(
+                        GRID / 2
+                    )
                 ) > 5;
+
 
             if (
                 obstacleList.some(
@@ -1543,13 +2270,18 @@ function createObstacles() {
                         o.y === p.y
                 )
             ) {
+
                 safe = false;
+
             }
 
         }
 
+
         if (safe) {
+
             obstacleList.push(p);
+
         }
 
     }
@@ -1565,6 +2297,7 @@ function createStars() {
 
     stars = [];
 
+
     for (
         let i = 0;
         i < 70;
@@ -1572,11 +2305,16 @@ function createStars() {
     ) {
 
         stars.push({
+
             x: Math.random(),
+
             y: Math.random(),
+
             r:
-                Math.random() * 1.5 +
+                Math.random() *
+                1.5 +
                 0.4
+
         });
 
     }
@@ -1591,6 +2329,7 @@ function createStars() {
 function spawnFood() {
 
     let p;
+
 
     do {
 
@@ -1610,7 +2349,9 @@ function spawnFood() {
 
         };
 
-    } while (
+    }
+
+    while (
 
         snake.some(
             s =>
@@ -1652,6 +2393,7 @@ function setDirection(dir) {
         return;
     }
 
+
     const dirs = {
 
         up: {
@@ -1676,7 +2418,10 @@ function setDirection(dir) {
 
     };
 
-    const nd = dirs[dir];
+
+    const nd =
+        dirs[dir];
+
 
     if (!nd) {
         return;
@@ -1687,8 +2432,11 @@ function setDirection(dir) {
         nd.x === -direction.x &&
         nd.y === -direction.y
     ) {
+
         return;
+
     }
+
 
     nextDirection = nd;
 
@@ -1701,6 +2449,7 @@ document.addEventListener(
 
         const key =
             e.key.toLowerCase();
+
 
         if (
             [
@@ -1715,7 +2464,9 @@ document.addEventListener(
                 "d"
             ].includes(key)
         ) {
+
             e.preventDefault();
+
         }
 
 
@@ -1723,32 +2474,46 @@ document.addEventListener(
             key === "arrowup" ||
             key === "w"
         ) {
+
             setDirection("up");
+
         }
+
 
         if (
             key === "arrowdown" ||
             key === "s"
         ) {
+
             setDirection("down");
+
         }
+
 
         if (
             key === "arrowleft" ||
             key === "a"
         ) {
+
             setDirection("left");
+
         }
+
 
         if (
             key === "arrowright" ||
             key === "d"
         ) {
+
             setDirection("right");
+
         }
 
+
         if (key === " ") {
+
             togglePause();
+
         }
 
     }
@@ -1842,8 +2607,6 @@ function updatePlayer() {
     };
 
 
-    // SPACE MAP = WRAP
-
     if (
         CONFIG.theme ===
         "우주"
@@ -1886,16 +2649,6 @@ function updatePlayer() {
     if (
         obstacleCollision(head)
     ) {
-
-        if (
-            CONFIG.theme ===
-            "우주"
-        ) {
-
-            // 우주에서는 장애물을 통과
-            // 하지 못함
-
-        }
 
         if (
             Date.now() >
@@ -1976,15 +2729,11 @@ function updatePlayer() {
     }
 
 
-    // LEVEL
-
     level =
         Math.floor(
             score / 10
         ) + 1;
 
-
-    // EVOLUTION
 
     if (
         CONFIG.evolution
@@ -1999,6 +2748,7 @@ function updatePlayer() {
                         ? 2
                         : 1;
 
+
         if (
             newStage >
             evolutionStage
@@ -2007,12 +2757,19 @@ function updatePlayer() {
             evolutionStage =
                 newStage;
 
+
             statusEl.textContent =
                 evolutionStage === 2
                     ? "🌱 성장했습니다!"
                     : evolutionStage === 3
                         ? "🔥 진화했습니다!"
                         : "🐉 최종 진화!";
+
+
+            soundEffect(
+                "evolution"
+            );
+
 
             createParticles(
                 snake[0].x,
@@ -2046,6 +2803,7 @@ function eatFood() {
             ? data.grow
             : 1;
 
+
     let points =
         CONFIG.specialFood
             ? data.points
@@ -2055,8 +2813,6 @@ function eatFood() {
     score += points;
 
 
-    // 성장 추가
-
     for (
         let i = 1;
         i < grow;
@@ -2064,11 +2820,17 @@ function eatFood() {
     ) {
 
         const tail =
-            snake[snake.length - 1];
+            snake[
+                snake.length - 1
+            ];
+
 
         snake.push({
+
             x: tail.x,
+
             y: tail.y
+
         });
 
     }
@@ -2086,6 +2848,7 @@ function eatFood() {
             speedUntil =
                 Date.now() + 4000;
 
+
             powerText.textContent =
                 "⚡ SPEED UP";
 
@@ -2099,6 +2862,7 @@ function eatFood() {
 
             speedUntil =
                 Date.now() + 3000;
+
 
             powerText.textContent =
                 "🍔 HEAVY MODE";
@@ -2114,6 +2878,7 @@ function eatFood() {
             invincibleUntil =
                 Date.now() + 3000;
 
+
             powerText.textContent =
                 "🛡️ 무적";
 
@@ -2127,6 +2892,7 @@ function eatFood() {
 
             speedUntil =
                 Date.now() + 5000;
+
 
             powerText.textContent =
                 "🔥 TURBO";
@@ -2146,6 +2912,7 @@ function eatFood() {
                 45
             );
 
+
             unlockAchievement(
                 "gold",
                 "황금 사냥꾼"
@@ -2162,12 +2929,18 @@ function eatFood() {
 
         best = score;
 
+
         localStorage.setItem(
             "snakeWorldBest",
             best
         );
 
     }
+
+
+    soundEffect(
+        "eat"
+    );
 
 
     createParticles(
@@ -2237,14 +3010,18 @@ function updateAI() {
         CONFIG.gameMode !==
         "AI 대결"
     ) {
+
         return;
+
     }
 
 
     if (
         aiSnake.length === 0
     ) {
+
         return;
+
     }
 
 
@@ -2255,6 +3032,7 @@ function updateAI() {
     const dx =
         foodPos.x -
         head.x;
+
 
     const dy =
         foodPos.y -
@@ -2272,17 +3050,24 @@ function updateAI() {
         if (dx !== 0) {
 
             candidates.push({
+
                 x: Math.sign(dx),
+
                 y: 0
+
             });
 
         }
 
+
         if (dy !== 0) {
 
             candidates.push({
+
                 x: 0,
+
                 y: Math.sign(dy)
+
             });
 
         }
@@ -2294,17 +3079,24 @@ function updateAI() {
         if (dy !== 0) {
 
             candidates.push({
+
                 x: 0,
+
                 y: Math.sign(dy)
+
             });
 
         }
 
+
         if (dx !== 0) {
 
             candidates.push({
+
                 x: Math.sign(dx),
+
                 y: 0
+
             });
 
         }
@@ -2313,18 +3105,37 @@ function updateAI() {
 
 
     candidates.push(
-        {x: 1, y: 0},
-        {x: -1, y: 0},
-        {x: 0, y: 1},
-        {x: 0, y: -1}
+
+        {
+            x: 1,
+            y: 0
+        },
+
+        {
+            x: -1,
+            y: 0
+        },
+
+        {
+            x: 0,
+            y: 1
+        },
+
+        {
+            x: 0,
+            y: -1
+        }
+
     );
 
 
-    let chosen = aiDirection;
+    let chosen =
+        aiDirection;
 
 
     if (
-        CONFIG.aiLevel === "상"
+        CONFIG.aiLevel ===
+        "상"
     ) {
 
         for (
@@ -2336,6 +3147,7 @@ function updateAI() {
             ) {
 
                 chosen = c;
+
                 break;
 
             }
@@ -2344,14 +3156,17 @@ function updateAI() {
 
     }
 
+
     else if (
-        CONFIG.aiLevel === "중"
+        CONFIG.aiLevel ===
+        "중"
     ) {
 
         const good =
             candidates.filter(
                 validAIMove
             );
+
 
         if (
             good.length
@@ -2369,6 +3184,7 @@ function updateAI() {
 
     }
 
+
     else {
 
         if (
@@ -2380,6 +3196,7 @@ function updateAI() {
                 candidates.filter(
                     validAIMove
                 );
+
 
             if (
                 good.length
@@ -2401,16 +3218,21 @@ function updateAI() {
 
 
     if (
-        chosen.x === -aiDirection.x &&
-        chosen.y === -aiDirection.y
+        chosen.x ===
+        -aiDirection.x &&
+
+        chosen.y ===
+        -aiDirection.y
     ) {
 
-        chosen = aiDirection;
+        chosen =
+            aiDirection;
 
     }
 
 
-    aiDirection = chosen;
+    aiDirection =
+        chosen;
 
 
     let next = {
@@ -2483,15 +3305,10 @@ function updateAI() {
 
     else {
 
-        // AI가 먹으면
-        // 새로운 먹이가 생김
-
         spawnFood();
 
     }
 
-
-    // AI와 플레이어 충돌
 
     if (
         snake.some(
@@ -2514,6 +3331,7 @@ function validAIMove(dir) {
 
     const h =
         aiSnake[0];
+
 
     const p = {
 
@@ -2586,7 +3404,7 @@ function validAIMove(dir) {
 
 
 // ============================================================
-// AI GAME OVER CHECK
+// AI FINISH
 // ============================================================
 
 function checkAIFinish() {
@@ -2595,18 +3413,8 @@ function checkAIFinish() {
         CONFIG.gameMode !==
         "AI 대결"
     ) {
+
         return;
-    }
-
-
-    if (
-        aiSnake.length >=
-        20 &&
-        snake.length < 5
-    ) {
-
-        // 단순 압박
-        // 플레이어는 계속 가능
 
     }
 
@@ -2634,16 +3442,26 @@ function gameOver(reason) {
         return;
     }
 
+
     running = false;
+
+
+    soundEffect(
+        "gameover"
+    );
+
 
     overTitle.textContent =
         "💥 GAME OVER";
 
+
     overText.textContent =
         `${reason}  ·  점수 ${score}`;
 
+
     overlay.style.display =
         "flex";
+
 
     statusEl.textContent =
         reason;
@@ -2667,13 +3485,16 @@ function togglePause() {
         return;
     }
 
-    paused = !paused;
+
+    paused =
+        !paused;
 
 
     if (paused) {
 
         statusEl.textContent =
             "⏸ 일시정지";
+
 
         document.getElementById(
             "pause"
@@ -2687,10 +3508,12 @@ function togglePause() {
         statusEl.textContent =
             "게임 진행 중";
 
+
         document.getElementById(
             "pause"
         ).textContent =
             "⏸ 일시정지";
+
 
         lastTime =
             performance.now();
@@ -2737,8 +3560,11 @@ function createParticles(
 
         particles.push({
 
-            x: gx + 0.5,
-            y: gy + 0.5,
+            x:
+                gx + 0.5,
+
+            y:
+                gy + 0.5,
 
             vx:
                 (Math.random() - .5)
@@ -2766,6 +3592,7 @@ function updateParticles() {
             p => {
 
                 p.x += p.vx;
+
                 p.y += p.vy;
 
                 p.life -= .035;
@@ -2787,6 +3614,7 @@ function drawBackground() {
     ctx.fillStyle =
         THEME.bg;
 
+
     ctx.fillRect(
         0,
         0,
@@ -2798,11 +3626,14 @@ function drawBackground() {
     const bw =
         GRID * cell;
 
+
     const bh =
         GRID * cell;
 
+
     const ox =
         (W - bw) / 2;
+
 
     const oy =
         (H - bh) / 2;
@@ -2811,7 +3642,9 @@ function drawBackground() {
     ctx.fillStyle =
         THEME.board;
 
+
     ctx.beginPath();
+
 
     ctx.roundRect(
         ox,
@@ -2821,13 +3654,13 @@ function drawBackground() {
         20
     );
 
+
     ctx.fill();
 
 
-    // GRID
-
     ctx.strokeStyle =
         THEME.grid;
+
 
     ctx.lineWidth = 1;
 
@@ -2840,15 +3673,18 @@ function drawBackground() {
 
         ctx.beginPath();
 
+
         ctx.moveTo(
             ox + x * cell,
             oy
         );
 
+
         ctx.lineTo(
             ox + x * cell,
             oy + bh
         );
+
 
         ctx.stroke();
 
@@ -2863,34 +3699,40 @@ function drawBackground() {
 
         ctx.beginPath();
 
+
         ctx.moveTo(
             ox,
             oy + y * cell
         );
+
 
         ctx.lineTo(
             ox + bw,
             oy + y * cell
         );
 
+
         ctx.stroke();
 
     }
 
 
-    // BORDER
-
     ctx.strokeStyle =
         THEME.border;
 
+
     ctx.lineWidth = 3;
+
 
     ctx.shadowColor =
         THEME.border;
 
+
     ctx.shadowBlur = 20;
 
+
     ctx.beginPath();
+
 
     ctx.roundRect(
         ox,
@@ -2900,12 +3742,12 @@ function drawBackground() {
         20
     );
 
+
     ctx.stroke();
+
 
     ctx.shadowBlur = 0;
 
-
-    // THEME DETAILS
 
     drawThemeDetails(
         ox,
@@ -2926,6 +3768,7 @@ function drawThemeDetails(
 
     ctx.save();
 
+
     if (
         CONFIG.theme ===
         "우주"
@@ -2938,7 +3781,9 @@ function drawThemeDetails(
             ctx.fillStyle =
                 "rgba(255,255,255,.7)";
 
+
             ctx.beginPath();
+
 
             ctx.arc(
                 ox + s.x * bw,
@@ -2947,6 +3792,7 @@ function drawThemeDetails(
                 0,
                 Math.PI * 2
             );
+
 
             ctx.fill();
 
@@ -2964,6 +3810,7 @@ function drawThemeDetails(
             ox + 28,
             oy + 28
         );
+
 
         drawTree(
             ox + bw - 28,
@@ -2983,6 +3830,7 @@ function drawThemeDetails(
             oy + 35
         );
 
+
         drawCactus(
             ox + bw - 30,
             oy + 40
@@ -3001,12 +3849,14 @@ function drawThemeDetails(
             oy + 30
         );
 
+
         drawIceCrystal(
             ox + bw - 30,
             oy + 40
         );
 
     }
+
 
     ctx.restore();
 
@@ -3018,7 +3868,9 @@ function drawTree(x,y) {
     ctx.fillStyle =
         "#166534";
 
+
     ctx.beginPath();
+
 
     ctx.arc(
         x,
@@ -3028,7 +3880,9 @@ function drawTree(x,y) {
         Math.PI * 2
     );
 
+
     ctx.fill();
+
 
     ctx.fillRect(
         x - 3,
@@ -3045,6 +3899,7 @@ function drawCactus(x,y) {
     ctx.fillStyle =
         "#65a30d";
 
+
     ctx.fillRect(
         x - 4,
         y - 15,
@@ -3052,12 +3907,14 @@ function drawCactus(x,y) {
         35
     );
 
+
     ctx.fillRect(
         x - 14,
         y - 2,
         10,
         7
     );
+
 
     ctx.fillRect(
         x + 4,
@@ -3074,7 +3931,9 @@ function drawIceCrystal(x,y) {
     ctx.strokeStyle =
         "#bae6fd";
 
+
     ctx.lineWidth = 2;
+
 
     for (
         let i = 0;
@@ -3085,7 +3944,9 @@ function drawIceCrystal(x,y) {
         const a =
             i * Math.PI / 3;
 
+
         ctx.beginPath();
+
 
         ctx.moveTo(
             x -
@@ -3094,12 +3955,14 @@ function drawIceCrystal(x,y) {
             Math.sin(a) * 14
         );
 
+
         ctx.lineTo(
             x +
             Math.cos(a) * 14,
             y +
             Math.sin(a) * 14
         );
+
 
         ctx.stroke();
 
@@ -3119,9 +3982,14 @@ function drawObstacles() {
     ) {
 
         const p =
-            gridToPixel(o.x,o.y);
+            gridToPixel(
+                o.x,
+                o.y
+            );
+
 
         ctx.save();
+
 
         if (
             CONFIG.theme ===
@@ -3131,7 +3999,9 @@ function drawObstacles() {
             ctx.fillStyle =
                 "#475569";
 
+
             ctx.beginPath();
+
 
             ctx.arc(
                 p.x,
@@ -3141,12 +4011,16 @@ function drawObstacles() {
                 Math.PI * 2
             );
 
+
             ctx.fill();
+
 
             ctx.fillStyle =
                 "#64748b";
 
+
             ctx.beginPath();
+
 
             ctx.arc(
                 p.x - cell*.1,
@@ -3156,9 +4030,11 @@ function drawObstacles() {
                 Math.PI * 2
             );
 
+
             ctx.fill();
 
         }
+
 
         else if (
             CONFIG.theme ===
@@ -3167,6 +4043,7 @@ function drawObstacles() {
 
             ctx.fillStyle =
                 "#a16207";
+
 
             ctx.fillRect(
                 p.x - cell*.18,
@@ -3177,6 +4054,7 @@ function drawObstacles() {
 
         }
 
+
         else if (
             CONFIG.theme ===
             "얼음"
@@ -3185,42 +4063,54 @@ function drawObstacles() {
             ctx.fillStyle =
                 "#67e8f9";
 
-            ctx.globalAlpha = .7;
+
+            ctx.globalAlpha =
+                .7;
+
 
             ctx.beginPath();
+
 
             ctx.moveTo(
                 p.x,
                 p.y - cell*.4
             );
 
+
             ctx.lineTo(
                 p.x + cell*.35,
                 p.y
             );
+
 
             ctx.lineTo(
                 p.x,
                 p.y + cell*.4
             );
 
+
             ctx.lineTo(
                 p.x - cell*.35,
                 p.y
             );
 
+
             ctx.closePath();
+
 
             ctx.fill();
 
         }
+
 
         else {
 
             ctx.fillStyle =
                 "#64748b";
 
+
             ctx.beginPath();
+
 
             ctx.arc(
                 p.x,
@@ -3230,9 +4120,11 @@ function drawObstacles() {
                 Math.PI * 2
             );
 
+
             ctx.fill();
 
         }
+
 
         ctx.restore();
 
@@ -3250,14 +4142,18 @@ function gridToPixel(x,y) {
     const bw =
         GRID * cell;
 
+
     const bh =
         GRID * cell;
+
 
     const ox =
         (W - bw) / 2;
 
+
     const oy =
         (H - bh) / 2;
+
 
     return {
 
@@ -3277,7 +4173,7 @@ function gridToPixel(x,y) {
 
 
 // ============================================================
-// FOOD DRAW
+// FOOD
 // ============================================================
 
 function drawFood() {
@@ -3306,14 +4202,17 @@ function drawFood() {
     ctx.shadowColor =
         THEME.accent;
 
+
     ctx.shadowBlur = 22;
 
 
     ctx.font =
         `${cell * .85 * pulse}px Arial`;
 
+
     ctx.textAlign =
         "center";
+
 
     ctx.textBaseline =
         "middle";
@@ -3332,7 +4231,7 @@ function drawFood() {
 
 
 // ============================================================
-// COLOR UTILITIES
+// COLOR
 // ============================================================
 
 function hexToRgb(hex) {
@@ -3342,6 +4241,7 @@ function hexToRgb(hex) {
             hex.slice(1),
             16
         );
+
 
     return {
 
@@ -3366,6 +4266,7 @@ function shade(
 
     const c =
         hexToRgb(hex);
+
 
     return `rgb(
         ${Math.max(
@@ -3395,7 +4296,7 @@ function shade(
 
 
 // ============================================================
-// SNAKE STYLE COLOR
+// SNAKE COLOR
 // ============================================================
 
 function segmentColor(i) {
@@ -3501,7 +4402,7 @@ function segmentColor(i) {
 
 
 // ============================================================
-// DRAW PLAYER SNAKE
+// DRAW SNAKE
 // ============================================================
 
 function drawSnake() {
@@ -3521,14 +4422,11 @@ function drawSnake() {
 
     }
 
+
     drawHead();
 
 }
 
-
-// ============================================================
-// DRAW SEGMENT
-// ============================================================
 
 function drawSegment(
     part,
@@ -3603,12 +4501,12 @@ function drawSegment(
         ctx.shadowColor =
             color;
 
-        ctx.shadowBlur = 16;
+
+        ctx.shadowBlur =
+            16;
 
     }
 
-
-    // BODY
 
     const gradient =
         ctx.createRadialGradient(
@@ -3620,21 +4518,25 @@ function drawSegment(
             radius
         );
 
+
     gradient.addColorStop(
         0,
         shade(color,35)
     );
+
 
     gradient.addColorStop(
         1,
         color
     );
 
+
     ctx.fillStyle =
         gradient;
 
 
     ctx.beginPath();
+
 
     ctx.arc(
         p.x,
@@ -3644,10 +4546,9 @@ function drawSegment(
         Math.PI * 2
     );
 
+
     ctx.fill();
 
-
-    // BODY PATTERN
 
     if (
         CONFIG.snakeStyle ===
@@ -3659,9 +4560,12 @@ function drawSegment(
         ctx.strokeStyle =
             "rgba(0,0,0,.28)";
 
+
         ctx.lineWidth = 2;
 
+
         ctx.beginPath();
+
 
         ctx.arc(
             p.x,
@@ -3670,6 +4574,7 @@ function drawSegment(
             0,
             Math.PI * 2
         );
+
 
         ctx.stroke();
 
@@ -3686,29 +4591,36 @@ function drawSegment(
         ctx.strokeStyle =
             "#67e8f9";
 
+
         ctx.lineWidth = 1;
 
+
         ctx.beginPath();
+
 
         ctx.moveTo(
             p.x - radius*.5,
             p.y
         );
 
+
         ctx.lineTo(
             p.x + radius*.5,
             p.y
         );
+
 
         ctx.moveTo(
             p.x,
             p.y - radius*.5
         );
 
+
         ctx.lineTo(
             p.x,
             p.y + radius*.5
         );
+
 
         ctx.stroke();
 
@@ -3725,7 +4637,9 @@ function drawSegment(
         ctx.fillStyle =
             "#fbbf24";
 
+
         ctx.beginPath();
+
 
         ctx.arc(
             p.x,
@@ -3735,17 +4649,18 @@ function drawSegment(
             Math.PI * 2
         );
 
+
         ctx.fill();
 
     }
 
 
-    // HIGHLIGHT
-
     ctx.fillStyle =
         "rgba(255,255,255,.14)";
 
+
     ctx.beginPath();
+
 
     ctx.arc(
         p.x - radius*.3,
@@ -3754,6 +4669,7 @@ function drawSegment(
         0,
         Math.PI * 2
     );
+
 
     ctx.fill();
 
@@ -3764,13 +4680,14 @@ function drawSegment(
 
 
 // ============================================================
-// DRAW PLAYER HEAD
+// HEAD
 // ============================================================
 
 function drawHead() {
 
     const h =
         snake[0];
+
 
     const p =
         gridToPixel(
@@ -3827,7 +4744,9 @@ function drawHead() {
         ctx.shadowColor =
             "#22d3ee";
 
-        ctx.shadowBlur = 25;
+
+        ctx.shadowBlur =
+            25;
 
     }
 
@@ -3842,6 +4761,7 @@ function drawHead() {
             r
         );
 
+
     g.addColorStop(
         0,
         shade(
@@ -3850,15 +4770,18 @@ function drawHead() {
         )
     );
 
+
     g.addColorStop(
         1,
         SNAKE_COLOR
     );
 
+
     ctx.fillStyle = g;
 
 
     ctx.beginPath();
+
 
     ctx.arc(
         p.x,
@@ -3868,12 +4791,9 @@ function drawHead() {
         Math.PI * 2
     );
 
+
     ctx.fill();
 
-
-    // ========================================================
-    // DRAGON HORNS
-    // ========================================================
 
     if (
         CONFIG.snakeStyle ===
@@ -3888,11 +4808,13 @@ function drawHead() {
         ctx.fillStyle =
             "#f8fafc";
 
+
         drawHorn(
             p.x - r*.55,
             p.y - r*.65,
             -1
         );
+
 
         drawHorn(
             p.x + r*.55,
@@ -3902,10 +4824,6 @@ function drawHead() {
 
     }
 
-
-    // ========================================================
-    // COBRA HOOD
-    // ========================================================
 
     if (
         CONFIG.snakeStyle ===
@@ -3918,9 +4836,12 @@ function drawHead() {
                 35
             );
 
+
         ctx.lineWidth = 5;
 
+
         ctx.beginPath();
+
 
         ctx.arc(
             p.x,
@@ -3930,16 +4851,14 @@ function drawHead() {
             Math.PI * .8
         );
 
+
         ctx.stroke();
 
     }
 
 
-    // ========================================================
-    // EYES
-    // ========================================================
-
     let ex = 0;
+
     let ey = 0;
 
 
@@ -3951,6 +4870,7 @@ function drawHead() {
             direction.x *
             r*.45;
 
+
         ey =
             r*.27;
 
@@ -3960,6 +4880,7 @@ function drawHead() {
 
         ex =
             r*.27;
+
 
         ey =
             direction.y *
@@ -3973,15 +4894,12 @@ function drawHead() {
         p.y + ey
     );
 
+
     drawEye(
         p.x + ex,
         p.y - ey
     );
 
-
-    // ========================================================
-    // TONGUE
-    // ========================================================
 
     if (
         CONFIG.snakeStyle !==
@@ -3991,7 +4909,9 @@ function drawHead() {
         ctx.strokeStyle =
             "#fb7185";
 
+
         ctx.lineWidth = 1.8;
+
 
         ctx.lineCap =
             "round";
@@ -4001,6 +4921,7 @@ function drawHead() {
             p.x +
             direction.x *
             r*.75;
+
 
         const sy =
             p.y +
@@ -4013,6 +4934,7 @@ function drawHead() {
             direction.x *
             r*1.2;
 
+
         const ty =
             p.y +
             direction.y *
@@ -4021,15 +4943,18 @@ function drawHead() {
 
         ctx.beginPath();
 
+
         ctx.moveTo(
             sx,
             sy
         );
 
+
         ctx.lineTo(
             tx,
             ty
         );
+
 
         ctx.stroke();
 
@@ -4044,10 +4969,12 @@ function drawHead() {
 
             ctx.beginPath();
 
+
             ctx.moveTo(
                 tx,
                 ty
             );
+
 
             ctx.lineTo(
                 tx -
@@ -4059,16 +4986,13 @@ function drawHead() {
                 cell*.15
             );
 
+
             ctx.stroke();
 
         }
 
     }
 
-
-    // ========================================================
-    // EVOLUTION BADGE
-    // ========================================================
 
     if (
         CONFIG.evolution &&
@@ -4080,17 +5004,25 @@ function drawHead() {
                 ? "#fbbf24"
                 : "#f97316";
 
+
         ctx.beginPath();
+
 
         ctx.arc(
             p.x -
-            direction.y * r*.7,
+            direction.y *
+            r*.7,
+
             p.y +
-            direction.x * r*.7,
+            direction.x *
+            r*.7,
+
             cell*.07,
+
             0,
             Math.PI * 2
         );
+
 
         ctx.fill();
 
@@ -4110,10 +5042,12 @@ function drawHorn(
 
     ctx.beginPath();
 
+
     ctx.moveTo(
         x,
         y
     );
+
 
     ctx.lineTo(
         x +
@@ -4122,6 +5056,7 @@ function drawHorn(
         cell*.25
     );
 
+
     ctx.lineTo(
         x +
         side * cell*.12,
@@ -4129,7 +5064,9 @@ function drawHorn(
         cell*.02
     );
 
+
     ctx.closePath();
+
 
     ctx.fill();
 
@@ -4144,7 +5081,9 @@ function drawEye(
     ctx.fillStyle =
         "#ffffff";
 
+
     ctx.beginPath();
+
 
     ctx.arc(
         x,
@@ -4154,13 +5093,16 @@ function drawEye(
         Math.PI * 2
     );
 
+
     ctx.fill();
 
 
     ctx.fillStyle =
         "#111827";
 
+
     ctx.beginPath();
+
 
     ctx.arc(
         x +
@@ -4177,13 +5119,14 @@ function drawEye(
         Math.PI * 2
     );
 
+
     ctx.fill();
 
 }
 
 
 // ============================================================
-// DRAW AI
+// AI DRAW
 // ============================================================
 
 function drawAI() {
@@ -4192,7 +5135,9 @@ function drawAI() {
         CONFIG.gameMode !==
         "AI 대결"
     ) {
+
         return;
+
     }
 
 
@@ -4215,12 +5160,15 @@ function drawAI() {
     if (
         aiSnake.length === 0
     ) {
+
         return;
+
     }
 
 
     const h =
         aiSnake[0];
+
 
     const p =
         gridToPixel(
@@ -4231,14 +5179,18 @@ function drawAI() {
 
     ctx.save();
 
+
     ctx.fillStyle =
         "#f87171";
+
 
     ctx.font =
         `${cell*.32}px Arial`;
 
+
     ctx.textAlign =
         "center";
+
 
     ctx.fillText(
         "AI",
@@ -4246,13 +5198,14 @@ function drawAI() {
         p.y - cell*.62
     );
 
+
     ctx.restore();
 
 }
 
 
 // ============================================================
-// DRAW PARTICLES
+// PARTICLES
 // ============================================================
 
 function drawParticles() {
@@ -4267,7 +5220,9 @@ function drawParticles() {
                 p.y
             );
 
+
         ctx.save();
+
 
         ctx.globalAlpha =
             Math.max(
@@ -4275,10 +5230,13 @@ function drawParticles() {
                 p.life
             );
 
+
         ctx.fillStyle =
             p.color;
 
+
         ctx.beginPath();
+
 
         ctx.arc(
             pos.x,
@@ -4288,7 +5246,9 @@ function drawParticles() {
             Math.PI * 2
         );
 
+
         ctx.fill();
+
 
         ctx.restore();
 
@@ -4321,7 +5281,7 @@ function draw() {
 
 
 // ============================================================
-// GAME LOOP
+// LOOP
 // ============================================================
 
 function loop(timestamp) {
@@ -4344,8 +5304,6 @@ function loop(timestamp) {
     let currentSpeed =
         baseSpeed;
 
-
-    // SPECIAL FOOD SPEED
 
     if (
         Date.now() <
@@ -4379,31 +5337,6 @@ function loop(timestamp) {
     }
 
 
-    // ICE SLIDE
-
-    let moves =
-        1;
-
-    if (
-        CONFIG.theme ===
-        "얼음"
-        &&
-        CONFIG.gameMode !==
-        "클래식"
-    ) {
-
-        if (
-            direction.x !== 0 ||
-            direction.y !== 0
-        ) {
-
-            moves = 1;
-
-        }
-
-    }
-
-
     if (
         !paused &&
         timestamp -
@@ -4412,6 +5345,7 @@ function loop(timestamp) {
     ) {
 
         updatePlayer();
+
 
         if (
             CONFIG.gameMode ===
@@ -4423,6 +5357,7 @@ function loop(timestamp) {
                     CONFIG.aiLevel
                 ];
 
+
             if (
                 timestamp -
                 lastTime >=
@@ -4433,12 +5368,14 @@ function loop(timestamp) {
 
             }
 
+
             checkAIFinish();
 
         }
 
 
         updateParticles();
+
 
         lastTime =
             timestamp;
@@ -4447,6 +5384,7 @@ function loop(timestamp) {
 
 
     draw();
+
 
     requestAnimationFrame(
         loop
@@ -4461,6 +5399,55 @@ function loop(timestamp) {
 
 init();
 
+
+// 음악이 켜져 있는 경우
+// 첫 번째 사용자 입력에서 음악 시작
+
+if (
+    CONFIG.musicEnabled
+) {
+
+    const startAudioOnInteraction =
+        () => {
+
+            if (!musicPlaying) {
+
+                startMusic();
+
+            }
+
+            document.removeEventListener(
+                "keydown",
+                startAudioOnInteraction
+            );
+
+            canvas.removeEventListener(
+                "pointerdown",
+                startAudioOnInteraction
+            );
+
+        };
+
+
+    document.addEventListener(
+        "keydown",
+        startAudioOnInteraction,
+        {
+            once: true
+        }
+    );
+
+
+    canvas.addEventListener(
+        "pointerdown",
+        startAudioOnInteraction,
+        {
+            once: true
+        }
+    );
+
+}
+
 </script>
 
 </body>
@@ -4468,11 +5455,19 @@ init();
 """
 
 
+# ============================================================
+# INSERT CONFIG
+# ============================================================
+
 html = html.replace(
     "__CONFIG__",
     config_json
 )
 
+
+# ============================================================
+# STREAMLIT COMPONENT
+# ============================================================
 
 components.html(
     html,
